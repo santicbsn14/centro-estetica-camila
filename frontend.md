@@ -2863,3 +2863,64 @@ generar más si hace falta.
    directos a la base, sin caché de servidor).
 10. `npm run build --workspace=client-publico` — build limpio (verificado
     en esta tarea, ver arriba).
+
+### 2026-09-01 — index.html de client-publico: identidad estática para verificación (propósito Twilio)
+
+**Contexto:** el sitio público es el artefacto que responde el rechazo del
+Primary Compliance Profile de Twilio (identidad de negocio no verificable). El
+`<title>` ya trae "Camila González Belleza" exacto, pero el body es el root de
+React vacío — un verificador que NO ejecuta JS sólo ve el HTML estático. Se
+refuerza `client-publico/index.html` con identidad legible sin JS.
+
+**Cambios (sólo index.html, sin tocar React):**
+- `<meta name="description">` con nombre exacto de la WABA + rubro + ciudad.
+- `og:title`/`og:description`/`og:type`/`og:locale` con los mismos datos (preview
+  de link si alguien lo comparte, y otra fuente de texto para scanners).
+- `<noscript>` con una línea de texto plano nombrando el negocio (rubro + Rosario)
+  — visible en el HTML crudo aunque el JS no corra.
+- Favicon (reusar el monograma "cg" de §3 como .png/.ico en public/).
+
+**Regla:** el nombre y el rubro del meta/noscript deben coincidir LITERAL con lo
+cargado en el Trust Hub Business Profile de Twilio — un mismatch de rubro o
+razón social es exactamente lo que un revisor marca. No inventar wording:
+alinear con la propuesta firmada / el perfil de Twilio.
+
+---
+
+### 2026-09-01 (Claude Code) — Implementación del index.html estático + favicon
+
+**Archivos:** `client-publico/index.html` (sólo `<head>` y `<noscript>`, sin
+tocar React/componentes), `client-publico/public/favicon.png` (nuevo).
+
+**index.html — agregado dentro de `<head>`, dejando charset/viewport/title:**
+`meta[name=description]`, `og:title`, `og:description`, `og:type=website`,
+`og:locale=es_AR`, `link[rel=icon][type=image/png][href=/favicon.png]`. En
+`<body>`, después de `#root`: `<noscript>` con una línea de texto plano.
+
+**Favicon:** generado a PNG 64×64 (script propio, sin dependencias — encoder PNG
+en Node). Reusa el monograma "cg" con el **mismo tratamiento que el header**
+(`ReservaPage.css` `.lockup .cg`): disco tinta `#151515`, letras papel
+`#f8f7fb`. Nota: §3 (línea 98) describe el asset de la hoja de marca como "ink
+#151515 sobre transparente"; se optó por el disco invertido porque (a) es lo que
+YA rinde el lockup en producción, (b) un glifo oscuro sobre transparente
+desaparece en la tab de un browser con tema oscuro. Si aparece el PNG oficial de
+la hoja de marca, reemplaza a este sin más.
+
+**⚠ REVISAR EN WEB — rubro: "Salón de belleza" vs "Centro de estética".**
+El prompt de la tarea pedía el texto con **"Centro de estética"**. Pero el rubro
+de cara a la clienta en TODO el material del repo es **"Salón de belleza"**:
+§3 (lockup de marca CERRADO: "CAMILA GONZÁLEZ / SALÓN DE BELLEZA") y
+`ReservaPage.tsx:207` (`<div className="bt">Salón de belleza</div>`).
+"Centro de estética" sólo aparece en prosa interna (`CLAUDE.md`,
+`modelo-datos-turnos.md`), nunca como descriptor de marca. Siguiendo la regla de
+la tarea ("si en la propuesta el rubro figura distinto, usá el término de la
+propuesta, no inventes"), se usó **"Salón de belleza"** en `description`,
+`og:description` y `noscript`. **Santiago: confirmá contra
+`propuesta_camiGonzalez_Belleza.docx` y el campo industria/descripción del Trust
+Hub Business Profile de Twilio.** Si el perfil de Twilio dice otra cosa
+(incluido "Centro de estética"), hay que editar 3 strings en `index.html` para
+que matcheen LITERAL — el `.docx` no está en el repo, no se pudo verificar acá.
+Ciudad ("Rosario, Argentina") es consistente en todo el repo, no se tocó.
+
+**Cierre:** `npm run build --workspace=client-publico` limpio (tsc --noEmit +
+vite build, 173 módulos, `dist/index.html` 0.99 kB, favicon copiado a `dist/`).
