@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reservar turno · Camila González</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --tinta:#151515; --papel:#f8f7fb; --blanco:#ffffff;
+    --t72:#4a4a4c; --t48:#7c7c7e; --t30:#a9a8b0;
+    --linea:#e6e5eb; --linea2:#d4d3db;
+    --ok:#245c3b; --ok-bg:#e0ecdf; --ok-l:#c7ddc4;
+    --err:#8f322c; --err-bg:#f5e6e4; --err-l:#e8ccc8;
+    --warn:#7a5b12; --warn-bg:#f3ead0;
+    --serif:'Fraunces','Playfair Display',Georgia,serif;
+    --sans:'Montserrat',system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--papel); color:var(--tinta); font-family:var(--sans); -webkit-font-smoothing:antialiased}
+  .num{font-variant-numeric:tabular-nums}
+  .app{max-width:460px; margin:0 auto; min-height:100vh; background:var(--papel); display:flex; flex-direction:column; position:relative}
+
+  header.top{position:sticky; top:0; z-index:5; background:rgba(248,247,251,.92); backdrop-filter:blur(6px); border-bottom:.5px solid var(--linea); padding:14px 18px}
+  .toprow{display:flex; align-items:center; gap:10px}
+  .back{width:32px; height:32px; border-radius:9px; border:.5px solid var(--linea2); background:var(--blanco); color:var(--t72); display:none; align-items:center; justify-content:center; cursor:pointer; flex:none}
+  .back.show{display:flex}
+  .lockup{display:flex; align-items:center; gap:9px}
+  .lockup img{width:26px}
+  .lockup .bn{font-family:var(--serif); font-weight:600; font-size:14px; letter-spacing:.02em; line-height:1}
+  .lockup .bt{font-size:8px; font-weight:500; letter-spacing:.2em; text-transform:uppercase; color:var(--t48); margin-top:2px}
+  .steps{display:flex; gap:5px; margin-top:12px}
+  .steps i{flex:1; height:3px; border-radius:99px; background:var(--linea2)}
+  .steps i.on{background:var(--tinta)}
+
+  main{flex:1; padding:20px 18px 100px}
+  h1.title{font-family:var(--serif); font-weight:600; font-size:23px; margin:2px 0 4px}
+  p.sub{font-size:13px; color:var(--t48); margin:0 0 20px; line-height:1.5}
+
+  /* catálogo acordeón */
+  .svc{background:var(--blanco); border:.5px solid var(--linea); border-radius:14px; margin-bottom:10px; overflow:hidden}
+  .svc-hd{display:flex; align-items:center; gap:12px; padding:15px 16px; cursor:pointer}
+  .svc-hd .info{flex:1; min-width:0}
+  .svc-hd .n{font-size:14.5px; font-weight:600}
+  .svc-hd .d{font-size:12px; color:var(--t48); margin-top:2px; line-height:1.4}
+  .svc-hd .meta{display:flex; gap:8px; margin-top:6px; font-size:11.5px; color:var(--t72)}
+  .svc-hd .meta span{display:inline-flex; align-items:center; gap:4px}
+  .svc-hd .chev{color:var(--t48); flex:none; transition:transform .18s}
+  .svc.open .chev{transform:rotate(180deg)}
+  .svc-body{max-height:0; overflow:hidden; transition:max-height .22s ease}
+  .svc.open .svc-body{max-height:300px}
+  .svc-body-in{padding:2px 16px 16px}
+  .svc-body-in .lbl{font-size:11.5px; font-weight:600; color:var(--t48); text-transform:uppercase; letter-spacing:.05em; margin-bottom:10px}
+  .profs{display:flex; flex-direction:column; gap:8px}
+  .prof-btn{display:flex; align-items:center; gap:11px; width:100%; text-align:left; background:var(--papel); border:.5px solid var(--linea); border-radius:11px; padding:11px 13px; cursor:pointer; font-family:var(--sans)}
+  .prof-btn:hover{border-color:var(--tinta)}
+  .prof-btn .av{width:34px; height:34px; border-radius:50%; background:#ececef; color:#57545e; display:grid; place-items:center; font-size:12px; font-weight:600; flex:none}
+  .prof-btn .nm{font-size:13.5px; font-weight:600}
+  .prof-btn .go{margin-left:auto; color:var(--t48)}
+
+  /* grilla horarios */
+  .summary{display:flex; align-items:center; gap:11px; background:var(--blanco); border:.5px solid var(--linea); border-radius:13px; padding:12px 14px; margin-bottom:20px}
+  .summary .av{width:36px; height:36px; border-radius:50%; background:#ececef; color:#57545e; display:grid; place-items:center; font-size:12px; font-weight:600; flex:none}
+  .summary .tx{flex:1; min-width:0}
+  .summary .s1{font-size:13.5px; font-weight:600}
+  .summary .s2{font-size:12px; color:var(--t48); margin-top:1px}
+  .summary .change{font-size:12px; font-weight:600; color:var(--t72); background:none; border:0; cursor:pointer; text-decoration:underline; text-underline-offset:2px}
+
+  .daygroup{margin-bottom:22px}
+  .daylabel{font-size:12.5px; font-weight:600; color:var(--t72); margin:0 0 10px; text-transform:capitalize}
+  .slotgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+  .slot{background:var(--blanco); border:.5px solid var(--linea2); border-radius:10px; padding:10px 4px; font-family:var(--sans); font-size:13px; font-weight:600; color:var(--tinta); text-align:center; cursor:pointer}
+  .slot:hover{border-color:var(--tinta)}
+  .slot.taken{background:var(--papel); color:var(--t30); border-style:dashed; text-decoration:line-through; cursor:default; pointer-events:none}
+  .empty-slots{background:var(--blanco); border:.5px dashed var(--linea2); border-radius:13px; padding:26px 18px; text-align:center; color:var(--t48); font-size:13px}
+
+  /* bottom sheet */
+  .scrim{position:absolute; inset:0; background:rgba(21,21,21,.32); opacity:0; pointer-events:none; transition:opacity .2s; z-index:10}
+  .scrim.open{opacity:1; pointer-events:auto}
+  .sheet{position:absolute; left:0; right:0; bottom:0; background:var(--blanco); border-radius:20px 20px 0 0; transform:translateY(100%); transition:transform .24s cubic-bezier(.4,0,.2,1); z-index:11; max-height:88%; display:flex; flex-direction:column; box-shadow:0 -8px 30px rgba(21,21,21,.12)}
+  .sheet.open{transform:translateY(0)}
+  .sheet-handle{width:36px; height:4px; background:var(--linea2); border-radius:99px; margin:10px auto 0}
+  .sheet-hd{padding:14px 20px 10px; border-bottom:.5px solid var(--linea)}
+  .sheet-hd h2{font-family:var(--serif); font-weight:600; font-size:19px; margin:0 0 8px}
+  .sheet-sum{background:var(--papel); border-radius:11px; padding:11px 13px; font-size:12.5px; color:var(--t72); line-height:1.6}
+  .sheet-sum b{color:var(--tinta); font-weight:600}
+  .sheet-body{padding:16px 20px; overflow:auto; flex:1}
+  .sheet-foot{padding:14px 20px 22px; border-top:.5px solid var(--linea)}
+
+  .fld{margin-bottom:14px}
+  .fld label{display:block; font-size:12.5px; font-weight:500; color:var(--t72); margin-bottom:6px}
+  input[type=text],input[type=tel],input[type=email]{width:100%; font-family:var(--sans); font-size:15px; color:var(--tinta); background:var(--papel); border:.5px solid var(--linea2); border-radius:10px; padding:0 13px; height:44px; outline:none; transition:border-color .15s, box-shadow .15s}
+  input:focus{border-color:var(--tinta); box-shadow:0 0 0 3px rgba(21,21,21,.08); background:var(--blanco)}
+  input[aria-invalid=true]{border-color:var(--err); box-shadow:0 0 0 3px rgba(143,50,44,.10)}
+  .telrow{display:flex; gap:8px}
+  .telrow .pre{flex:none; width:74px; display:flex; align-items:center; justify-content:center; background:var(--papel); border:.5px solid var(--linea2); border-radius:10px; font-size:13.5px; color:var(--t72); font-weight:500}
+  .telrow input{flex:1}
+  .hint{display:none; font-size:11.5px; color:var(--err); margin-top:5px}
+  .hint.show{display:block}
+  .help{font-size:11px; color:var(--t48); margin-top:5px}
+
+  .btn{font-family:var(--sans); font-size:14px; font-weight:600; border-radius:11px; padding:13px 18px; cursor:pointer; border:.5px solid var(--linea2); background:var(--blanco); color:var(--tinta); width:100%; text-align:center}
+  .btn.solid{background:var(--tinta); color:var(--papel); border-color:var(--tinta)}
+  .btn.solid:hover{background:#2a2a2a}
+  .btn.solid:disabled{opacity:.45; cursor:default}
+  .btn.sm{padding:9px 14px; font-size:12.5px; width:auto}
+
+  /* pantalla éxito */
+  .success{display:flex; flex-direction:column; align-items:center; text-align:center; padding:36px 8px 10px}
+  .success .check{width:64px; height:64px; border-radius:50%; background:var(--ok-bg); border:.5px solid var(--ok-l); color:var(--ok); display:grid; place-items:center; margin-bottom:18px}
+  .success h1{font-family:var(--serif); font-weight:600; font-size:24px; margin:0 0 8px}
+  .success p{font-size:13.5px; color:var(--t72); line-height:1.6; margin:0 0 22px; max-width:320px}
+  .success .card{width:100%; background:var(--blanco); border:.5px solid var(--linea); border-radius:14px; padding:16px 18px; text-align:left; margin-bottom:20px}
+  .success .card .row{display:flex; justify-content:space-between; font-size:13px; padding:7px 0; border-top:.5px solid var(--linea)}
+  .success .card .row:first-child{border-top:0}
+  .success .card .k{color:var(--t48)}
+  .success .card .v{font-weight:600; text-align:right}
+  .wa-note{display:flex; gap:10px; align-items:flex-start; background:var(--ok-bg); border:.5px solid var(--ok-l); border-radius:12px; padding:12px 14px; font-size:12.5px; color:var(--ok); line-height:1.5; text-align:left}
+  .wa-note svg{flex:none; margin-top:1px}
+
+  .toast{position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--tinta); color:var(--papel); font-size:12.5px; font-weight:500; padding:11px 16px; border-radius:10px; opacity:0; pointer-events:none; transition:opacity .18s, transform .18s; z-index:40; display:flex; align-items:center; gap:8px; max-width:90%}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  .toast.warn{background:var(--warn); color:#fff}
+
+  .demo{position:fixed; top:8px; right:8px; z-index:50; background:var(--tinta); color:var(--papel); font-size:10px; font-weight:600; padding:6px 10px; border-radius:8px; cursor:pointer; opacity:.65}
+  .demo:hover{opacity:1}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <div class="toprow">
+      <button class="back" id="backBtn" onclick="goBack()" aria-label="Volver"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="lockup"><img src="data:image/png;base64,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" alt=""><div><div class="bn">Camila González</div><div class="bt">Salón de belleza</div></div></div>
+    </div>
+    <div class="steps"><i id="st1" class="on"></i><i id="st2"></i><i id="st3"></i></div>
+  </header>
+
+  <main id="main"></main>
+
+  <div class="scrim" id="scrim" onclick="closeSheet()"></div>
+  <aside class="sheet" id="sheet"></aside>
+  <div class="toast" id="toast"><span id="toastMsg"></span></div>
+</div>
+
+<div class="demo" onclick="toggleDemo409()" id="demoBtn">simular: horario se ocupó (409)</div>
+
+<script>
+var SERVICIOS=[
+ {id:'s1',nombre:'Perfilado de cejas',desc:'Diseño y perfilado con pinza y cera',dur:30,precio:800000,mostrarPrecio:true,
+   profs:[{id:'p1',nombre:'Camila González'},{id:'p2',nombre:'Rocío Benítez'}]},
+ {id:'s2',nombre:'Manicura semipermanente',desc:'Esmaltado semipermanente, incluye retiro',dur:60,precio:1500000,mostrarPrecio:true,
+   profs:[{id:'p1',nombre:'Camila González'},{id:'p3',nombre:'Malena Ríos'}]},
+ {id:'s3',nombre:'Limpieza facial profunda',desc:'Limpieza + extracción + hidratación',dur:60,precio:0,mostrarPrecio:false,
+   profs:[{id:'p2',nombre:'Rocío Benítez'}]},
+ {id:'s4',nombre:'Lifting de pestañas',desc:'Curvado y tinte de pestañas naturales',dur:75,precio:1800000,mostrarPrecio:true,
+   profs:[{id:'p1',nombre:'Camila González'}]}
+];
+function ini(n){return n.split(' ').map(function(w){return w[0]}).slice(0,2).join('')}
+function money(c){return '$'+(c/100).toLocaleString('es-AR')}
+
+// slots demo: agrupados por día, ISO-like locales para mostrar
+var DIAS=[
+ {label:'Hoy · jueves 13 ago', slots:['14:00','14:30','16:00','17:30']},
+ {label:'Mañana · viernes 14 ago', slots:['09:30','10:00','10:30','11:30','15:00','15:30','16:00']},
+ {label:'Sábado 15 ago', slots:['09:30','10:00','13:00']}
+];
+
+var state={step:1, servicioId:null, profId:null, dia:null, hora:null, demo409:false};
+
+function toggleDemo409(){ state.demo409=!state.demo409; document.getElementById('demoBtn').style.opacity=state.demo409?'1':'.65'; document.getElementById('demoBtn').textContent = state.demo409 ? 'simulando 409 · click para desactivar' : 'simular: horario se ocupó (409)'; }
+
+function setStep(n){
+  state.step=n;
+  ['st1','st2','st3'].forEach(function(id,i){document.getElementById(id).classList.toggle('on', i < n)});
+  document.getElementById('backBtn').classList.toggle('show', n>1);
+  render();
+}
+function goBack(){
+  if(state.step===2){ state.profId=null; setStep(1); }
+  else if(state.step===3){ setStep(2); }
+}
+
+function render(){
+  var m=document.getElementById('main');
+  if(state.step===1) m.innerHTML=renderCatalogo();
+  if(state.step===2) m.innerHTML=renderGrilla();
+  window.scrollTo(0,0);
+}
+
+function renderCatalogo(){
+  var openId=state._openSvc;
+  var html='<h1 class="title">Reservá tu turno</h1><p class="sub">Elegí un servicio, después con quién y a qué hora. Sin registrarte.</p>';
+  html+=SERVICIOS.map(function(s){
+    var open=openId===s.id;
+    var meta='<span class="num">'+s.dur+' min</span>'+(s.mostrarPrecio?'<span class="num">·&nbsp;'+money(s.precio)+'</span>':'');
+    var profs=s.profs.map(function(p){return '<button class="prof-btn" onclick="pickProf(\''+s.id+'\',\''+p.id+'\')"><span class="av">'+ini(p.nombre)+'</span><span class="nm">'+p.nombre+'</span><span class="go"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></span></button>'}).join('');
+    return '<div class="svc'+(open?' open':'')+'"><div class="svc-hd" onclick="toggleSvc(\''+s.id+'\')">'+
+      '<div class="info"><div class="n">'+s.nombre+'</div><div class="d">'+s.desc+'</div><div class="meta">'+meta+'</div></div>'+
+      '<span class="chev"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span></div>'+
+      '<div class="svc-body"><div class="svc-body-in"><div class="lbl">Elegí quién te atiende</div><div class="profs">'+profs+'</div></div></div></div>';
+  }).join('');
+  return html;
+}
+function toggleSvc(id){ state._openSvc = (state._openSvc===id) ? null : id; render(); }
+function pickProf(svcId,profId){ state.servicioId=svcId; state.profId=profId; setStep(2); }
+
+function renderGrilla(){
+  var s=SERVICIOS.find(function(x){return x.id===state.servicioId});
+  var p=s.profs.find(function(x){return x.id===state.profId});
+  var html='<div class="summary"><span class="av">'+ini(p.nombre)+'</span><div class="tx"><div class="s1">'+s.nombre+' con '+p.nombre+'</div><div class="s2 num">'+s.dur+' min'+(s.mostrarPrecio?' · '+money(s.precio):'')+'</div></div><button class="change" onclick="goBack()">Cambiar</button></div>';
+  html+='<h1 class="title" style="font-size:19px">Elegí un horario</h1>';
+  var anyLeft=false;
+  DIAS.forEach(function(d){
+    var slots=d.slots.map(function(h){
+      var taken = state.demo409 && d===DIAS[0] && h==='14:00';
+      if(!taken) anyLeft=true;
+      return '<button class="slot'+(taken?' taken':'')+'" '+(taken?'disabled':'onclick="pickSlot(\''+d.label+'\',\''+h+'\')"')+'>'+h+'</button>';
+    }).join('');
+    html+='<div class="daygroup"><p class="daylabel">'+d.label+'</p><div class="slotgrid">'+slots+'</div></div>';
+  });
+  if(!anyLeft) html+='<div class="empty-slots">No quedan horarios en estos días. Probá más adelante.</div>';
+  return html;
+}
+
+function pickSlot(dia,hora){
+  state.dia=dia; state.hora=hora;
+  if(state.demo409 && dia===DIAS[0].label && hora==='14:00'){
+    // simula que justo se ocupó al confirmar
+    toast('Ese horario se acaba de ocupar. Elegí otro.','warn');
+    state.demo409=false; // se "consume" el conflicto, refresca grilla sin ese slot
+    render();
+    return;
+  }
+  openSheet();
+}
+
+function openSheet(){
+  var s=SERVICIOS.find(function(x){return x.id===state.servicioId});
+  var p=s.profs.find(function(x){return x.id===state.profId});
+  var sheet=document.getElementById('sheet');
+  sheet.innerHTML=
+    '<div class="sheet-handle"></div>'+
+    '<div class="sheet-hd"><h2>Confirmá tu turno</h2><div class="sheet-sum">'+
+      '<b>'+s.nombre+'</b> con '+p.nombre+'<br>'+state.dia+' · '+state.hora+' hs · '+s.dur+' min'+
+    '</div></div>'+
+    '<div class="sheet-body">'+
+      '<div class="fld"><label for="f_nom">Tu nombre</label><input type="text" id="f_nom" placeholder="Nombre y apellido"><p class="hint" id="h_nom">Ingresá tu nombre.</p></div>'+
+      '<div class="fld"><label for="f_tel">Tu teléfono</label><div class="telrow"><span class="pre">+54 9</span><input type="tel" id="f_tel" placeholder="341 555-1234"></div><p class="hint" id="h_tel">Ingresá tu número con característica (ej: 341...).</p><p class="help">Te vamos a confirmar por WhatsApp a este número.</p></div>'+
+      '<div class="fld"><label for="f_mail">Email <span style="color:var(--t48);font-weight:400">(opcional)</span></label><input type="email" id="f_mail" placeholder="tu@email.com"></div>'+
+    '</div>'+
+    '<div class="sheet-foot"><button class="btn solid" onclick="confirmar()">Confirmar turno</button></div>';
+  document.getElementById('scrim').classList.add('open');
+  sheet.classList.add('open');
+}
+function closeSheet(){ document.getElementById('scrim').classList.remove('open'); document.getElementById('sheet').classList.remove('open'); }
+
+function confirmar(){
+  var nom=document.getElementById('f_nom'), tel=document.getElementById('f_tel');
+  var hn=document.getElementById('h_nom'), ht=document.getElementById('h_tel');
+  hn.classList.remove('show'); ht.classList.remove('show');
+  nom.setAttribute('aria-invalid','false'); tel.setAttribute('aria-invalid','false');
+  var ok=true;
+  if(!nom.value.trim()){nom.setAttribute('aria-invalid','true');hn.classList.add('show');ok=false;}
+  var digits=tel.value.replace(/\D/g,'');
+  if(digits.length<10){tel.setAttribute('aria-invalid','true');ht.classList.add('show');ok=false;}
+  if(!ok) return;
+  closeSheet();
+  setTimeout(function(){ setStep(3); renderSuccess(); }, 200);
+}
+
+function renderSuccess(){
+  var s=SERVICIOS.find(function(x){return x.id===state.servicioId});
+  var p=s.profs.find(function(x){return x.id===state.profId});
+  document.getElementById('main').innerHTML=
+    '<div class="success"><div class="check"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></div>'+
+    '<h1>¡Listo, la enviamos!</h1>'+
+    '<p>Tu solicitud está pendiente de confirmación. Te avisamos por WhatsApp apenas Camila la confirme.</p>'+
+    '<div class="card">'+
+      '<div class="row"><span class="k">Servicio</span><span class="v">'+s.nombre+'</span></div>'+
+      '<div class="row"><span class="k">Con</span><span class="v">'+p.nombre+'</span></div>'+
+      '<div class="row"><span class="k">Cuándo</span><span class="v">'+state.dia+' · '+state.hora+' hs</span></div>'+
+    '</div>'+
+    '<div class="wa-note"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.3 5L2 22l5.2-1.3c1.5.8 3.1 1.3 4.8 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2z" opacity=".15"/><path d="M12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.5 1.3 5L2 22l5.2-1.3c1.5.8 3.1 1.3 4.8 1.3 5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18c-1.5 0-3-.4-4.2-1.1l-.3-.2-3.1.8.8-3-.2-.3C4.4 15 4 13.5 4 12c0-4.4 3.6-8 8-8s8 3.6 8 8-3.6 8-8 8z"/></svg><span>Vas a recibir un WhatsApp con la confirmación y un link para cancelar si no podés venir.</span></div>'+
+    '</div>';
+}
+
+function toast(msg,kind){ var t=document.getElementById('toast'); document.getElementById('toastMsg').textContent=msg; t.className='toast show'+(kind?' '+kind:''); setTimeout(function(){t.classList.remove('show')},2600); }
+
+render();
+</script>
+</body>
+</html>

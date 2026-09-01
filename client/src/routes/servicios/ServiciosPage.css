@@ -1,0 +1,217 @@
+/* Servicios — panel (frontend.md §4.5). Clonado de
+   client/mockups/servicios-camila.html: lista/tags/grilla del form, sobre las
+   primitivas ya existentes (Button/Input/Switch/Drawer) en vez de
+   reimplementarlas. El editor de horarios tiene su propio CSS
+   (components/EditorHorarios/EditorHorarios.css) porque es una pieza
+   reusada, no específica de esta pantalla. */
+
+.servicios-page {
+  max-width: 980px;
+}
+
+.servicios-page__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.servicios-page__titulo {
+  font-size: 1.9rem;
+}
+
+.servicios-page__sub {
+  font-size: 0.82rem;
+  color: var(--color-tinta-48);
+  margin: 0 0 1.4rem;
+}
+
+.servicios-page__aviso,
+.servicios-page__vacio {
+  background: var(--color-blanco);
+  border: 0.5px dashed var(--color-linea-fuerte);
+  border-radius: var(--radio-card);
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--color-tinta-48);
+  font-size: 0.85rem;
+}
+
+.servicios-page__aviso--error {
+  background: var(--color-error-fondo);
+  border: 0.5px solid var(--color-error-linea);
+  color: var(--color-error-texto);
+}
+
+/* Lista */
+.fila-servicio-grupo {
+  background: var(--color-blanco);
+  border: var(--borde-hairline);
+  border-radius: var(--radio-card);
+  overflow: hidden;
+}
+
+.fila-servicio {
+  display: grid;
+  grid-template-columns: 2.2fr 92px 92px 120px 120px 96px;
+  align-items: center;
+  gap: 14px;
+  padding: 0.94rem 1.1rem;
+  border-top: var(--borde-hairline);
+  cursor: pointer;
+}
+
+.fila-servicio-grupo .fila-servicio:first-child {
+  border-top: 0;
+}
+
+.fila-servicio:hover,
+.fila-servicio:focus-visible {
+  background: #fbfbfd;
+}
+
+.fila-servicio--header {
+  cursor: default;
+  background: #fbfbfd;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-tinta-48);
+}
+
+.fila-servicio--header:hover {
+  background: #fbfbfd;
+}
+
+.fila-servicio--inactivo {
+  opacity: 0.5;
+}
+
+.fila-servicio__nombre-texto {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.fila-servicio__desc {
+  font-size: 0.75rem;
+  color: var(--color-tinta-48);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fila-servicio__celda {
+  font-size: 0.81rem;
+  color: var(--color-tinta-72);
+}
+
+.fila-servicio__precio-oculto {
+  display: block;
+  font-size: 0.66rem;
+  color: var(--color-tinta-48);
+  font-weight: 600;
+}
+
+/* Tags (Activo/Inactivo, Hereda/Propio) — no son EstadoTurno, Badge no
+   aplica (frontend.md §4.0: reusar Zod donde HAY contrato que reusar). Los
+   colores sí reusan los tokens de estado ya cotejados (confirmado/cancelado)
+   en vez de hexs nuevos. */
+.tag-servicio {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: var(--radio-pill);
+  white-space: nowrap;
+}
+
+.tag-servicio::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.tag-servicio--activo,
+.tag-servicio--propio {
+  color: var(--color-estado-confirmado-texto);
+  background: var(--color-estado-confirmado-fondo);
+}
+
+.tag-servicio--inactivo,
+.tag-servicio--hereda {
+  color: var(--color-estado-cancelado-texto);
+  background: var(--color-estado-cancelado-fondo);
+}
+
+/* Form (drawer de alta/edición) */
+.servicio-drawer__campo {
+  margin-bottom: 1rem;
+}
+
+.servicio-drawer__opcional {
+  color: var(--color-tinta-48);
+  font-weight: 400;
+}
+
+.servicio-drawer__textarea {
+  width: 100%;
+  height: auto;
+  min-height: 4.2rem;
+  padding: 0.65rem 0.85rem;
+  resize: vertical;
+  font-family: var(--fuente-ui);
+  font-size: 0.88rem;
+}
+
+.servicio-drawer__grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 1rem;
+}
+
+.servicio-drawer__unidad {
+  font-size: 0.78rem;
+  color: var(--color-tinta-48);
+}
+
+.servicio-drawer__ayuda {
+  font-size: 0.72rem;
+  color: var(--color-tinta-48);
+  margin: 0.4rem 0 0;
+}
+
+.servicio-drawer__label-horario {
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.servicio-drawer__orden {
+  max-width: 130px;
+}
+
+@media (max-width: 820px) {
+  .fila-servicio,
+  .fila-servicio--header {
+    grid-template-columns: 1fr auto auto;
+  }
+
+  .fila-servicio__dur,
+  .fila-servicio__buf,
+  .fila-servicio__precio {
+    display: none;
+  }
+
+  .servicio-drawer__grid2 {
+    grid-template-columns: 1fr;
+  }
+}

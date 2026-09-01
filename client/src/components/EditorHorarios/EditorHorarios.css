@@ -1,0 +1,152 @@
+/* Clonado de .seg2/.sched/.day/.dayhd/.blocks/.block/.addblock/.schederr en
+   client/mockups/servicios-camila.html. .switch/.switch__perilla del día
+   reusan las clases globales de components/ui/Switch/Switch.css a propósito
+   (mismo lenguaje visual que el resto del panel, sin duplicar el track). */
+
+.editor-horarios__seg {
+  display: inline-flex;
+  background: var(--color-papel);
+  border: var(--borde-hairline);
+  border-radius: 11px;
+  padding: 3px;
+  margin-bottom: 10px;
+}
+
+.editor-horarios__seg button {
+  border: 0;
+  background: transparent;
+  font-family: var(--fuente-ui);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-tinta-72);
+  padding: 0.5rem 0.875rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.editor-horarios__seg button.is-on {
+  background: var(--color-tinta);
+  color: var(--color-papel);
+}
+
+.editor-horarios__ayuda {
+  font-size: 0.72rem;
+  color: var(--color-tinta-48);
+  margin: 0.4rem 0 0;
+}
+
+.editor-horarios__semana {
+  margin-top: 0.875rem;
+  border: var(--borde-hairline);
+  border-radius: var(--radio-card);
+  overflow: hidden;
+}
+
+.editor-horarios__dia {
+  border-top: var(--borde-hairline);
+}
+
+.editor-horarios__dia:first-child {
+  border-top: 0;
+}
+
+.editor-horarios__dia.is-on {
+  background: #fbfbfd;
+}
+
+.editor-horarios__dia-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0.69rem 0.875rem;
+}
+
+.editor-horarios__dia-nombre {
+  font-size: 0.84rem;
+  font-weight: 500;
+  width: 30px;
+}
+
+.editor-horarios__dia-cerrado {
+  font-size: 0.75rem;
+  color: var(--color-tinta-48);
+}
+
+.editor-horarios__bloques {
+  padding: 0 0.875rem 0.75rem 4.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.editor-horarios__bloque {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.editor-horarios__bloque input[type='time'] {
+  font-family: var(--fuente-ui);
+  font-size: 0.82rem;
+  border: var(--borde-hairline-fuerte);
+  border-radius: 8px;
+  padding: 0.44rem 0.56rem;
+  outline: none;
+  color: var(--color-tinta);
+  background: var(--color-blanco);
+}
+
+.editor-horarios__bloque input[type='time']:focus {
+  border-color: var(--color-tinta);
+  box-shadow: 0 0 0 3px rgba(21, 21, 21, 0.08);
+}
+
+.editor-horarios__separador {
+  color: var(--color-tinta-48);
+  font-size: 0.82rem;
+}
+
+.editor-horarios__quitar {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: var(--borde-hairline-fuerte);
+  background: var(--color-blanco);
+  color: var(--color-tinta-48);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.editor-horarios__quitar:hover {
+  color: var(--color-error-texto);
+  border-color: var(--color-error-linea);
+}
+
+.editor-horarios__agregar {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--color-tinta-72);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 2px 0;
+  text-align: left;
+  width: fit-content;
+}
+
+.editor-horarios__agregar:hover {
+  color: var(--color-tinta);
+}
+
+.editor-horarios__error {
+  background: var(--color-error-fondo);
+  border: 0.5px solid var(--color-error-linea);
+  color: var(--color-error-texto);
+  font-size: 0.78rem;
+  border-radius: 9px;
+  padding: 0.56rem 0.75rem;
+  margin: 0.75rem 0 0;
+}

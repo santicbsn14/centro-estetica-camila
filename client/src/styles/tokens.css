@@ -1,0 +1,55 @@
+/*
+ * Design tokens — frontend.md §3 (CERRADO salvo fuente display).
+ * Marca monocroma de alto contraste, sin color de acento; la UI deriva una
+ * paleta funcional desaturada sobre los 2 colores de marca.
+ *
+ * Fuente display: Marat Bold es la de marca, PENDIENTE de verificar licencia
+ * webfont (§3). Fraunces es el stand-in mientras tanto — cambiar acá nomás
+ * (--fuente-display) el día que se resuelva, sin tocar componentes.
+ */
+
+:root {
+  /* Marca */
+  --color-tinta: #151515;
+  --color-papel: #f8f7fb;
+  --color-blanco: #ffffff;
+
+  /* Neutros */
+  --color-tinta-72: #4a4a4c;
+  --color-tinta-48: #7c7c7e;
+  --color-linea: #e6e5eb;
+  --color-linea-fuerte: #d4d3db;
+
+  /* Estados de turno — texto / fondo de badge (los 6 estados de EstadoTurno,
+     shared/src/schemas/common.schema.ts) */
+  --color-estado-pendiente-texto: #7a5b12;
+  --color-estado-pendiente-fondo: #f3ead0;
+  --color-estado-confirmado-texto: #245c3b;
+  --color-estado-confirmado-fondo: #e0ecdf;
+  --color-estado-rechazado-texto: #8f322c;
+  --color-estado-rechazado-fondo: #f4e3e1;
+  --color-estado-cancelado-texto: #57545e;
+  --color-estado-cancelado-fondo: #ececef;
+  --color-estado-completado-texto: #3a3a3d;
+  --color-estado-completado-fondo: #eceaf0;
+  --color-estado-ausente-texto: #7a4a2a;
+  --color-estado-ausente-fondo: #f0e4da;
+
+  /* Error de formulario */
+  --color-error-texto: #8f322c;
+  --color-error-fondo: #f5e6e4;
+  --color-error-linea: #e8ccc8;
+
+  /* Tipografía */
+  --fuente-ui: 'Montserrat', system-ui, sans-serif;
+  --fuente-display: 'Fraunces', 'Georgia', serif; /* stand-in de Marat Bold — ver PENDIENTE §3 */
+
+  /* Radios */
+  --radio-control: 10px;
+  --radio-card: 12px;
+  --radio-pill: 999px;
+
+  /* Bordes hairline */
+  --borde-hairline: 0.5px solid var(--color-linea);
+  --borde-hairline-fuerte: 0.5px solid var(--color-linea-fuerte);
+}

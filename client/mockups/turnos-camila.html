@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turnos · Panel Camila González</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --tinta:#151515; --papel:#f8f7fb; --blanco:#ffffff;
+    --t72:#4a4a4c; --t48:#7c7c7e; --t30:#a9a8b0;
+    --linea:#e6e5eb; --linea2:#d4d3db;
+    --serif:'Fraunces','Playfair Display',Georgia,serif;
+    --sans:'Montserrat',system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--papel); color:var(--tinta); font-family:var(--sans); -webkit-font-smoothing:antialiased}
+  .num{font-variant-numeric:tabular-nums}
+
+  .app{display:grid; grid-template-columns:212px 1fr; min-height:100vh}
+
+  /* sidebar */
+  .side{background:var(--blanco); border-right:.5px solid var(--linea); display:flex; flex-direction:column; padding:20px 14px}
+  .brand{display:flex; align-items:center; gap:10px; padding:4px 8px 22px}
+  .brand img{width:34px; height:auto}
+  .brand .bn{font-family:var(--serif); font-weight:600; font-size:15px; letter-spacing:.02em; line-height:1}
+  .brand .bt{font-size:9px; font-weight:500; letter-spacing:.22em; text-transform:uppercase; color:var(--t48); margin-top:3px}
+  .nav{display:flex; flex-direction:column; gap:2px}
+  .nav a{display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; font-size:13.5px; font-weight:500; color:var(--t72); text-decoration:none; cursor:pointer}
+  .nav a .ic{width:17px; height:17px; flex:none; opacity:.85}
+  .nav a:hover{background:var(--papel)}
+  .nav a.on{background:var(--tinta); color:var(--papel)}
+  .nav a.adminonly{display:flex}
+  body.prof .nav a.adminonly{display:none}
+  .side .spacer{flex:1}
+  .who{display:flex; align-items:center; gap:10px; padding:10px 8px; border-top:.5px solid var(--linea); margin-top:10px}
+  .who .av{width:32px; height:32px; border-radius:50%; background:var(--tinta); color:var(--papel); display:grid; place-items:center; font-size:12px; font-weight:600; flex:none}
+  .who .wn{font-size:12.5px; font-weight:600; line-height:1.2}
+  .who .wr{font-size:11px; color:var(--t48); text-transform:capitalize}
+  .who .lo{margin-left:auto; color:var(--t48); cursor:pointer; display:grid; place-items:center}
+  .who .lo:hover{color:var(--tinta)}
+
+  /* main */
+  .main{padding:26px 30px 60px; min-width:0}
+  .demo{display:inline-flex; align-items:center; gap:8px; background:#efeef4; border:.5px solid var(--linea2); border-radius:999px; padding:4px 6px 4px 12px; font-size:11.5px; color:var(--t72); margin-bottom:20px}
+  .demo b{font-weight:600; color:var(--tinta)}
+  .demo .seg{display:flex; background:var(--blanco); border-radius:999px; padding:2px}
+  .demo .seg button{border:0; background:transparent; font-family:var(--sans); font-size:11.5px; font-weight:600; color:var(--t48); padding:4px 12px; border-radius:999px; cursor:pointer}
+  .demo .seg button.on{background:var(--tinta); color:var(--papel)}
+
+  .head{display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:20px}
+  .title{font-family:var(--serif); font-weight:600; font-size:30px; letter-spacing:.005em; margin:0}
+  .sub{font-size:13px; color:var(--t48)}
+
+  .filters{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:22px}
+  .fseg{display:flex; background:var(--blanco); border:.5px solid var(--linea); border-radius:11px; padding:3px}
+  .fseg button{border:0; background:transparent; font-family:var(--sans); font-size:13px; font-weight:500; color:var(--t72); padding:7px 14px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:7px}
+  .fseg button.on{background:var(--tinta); color:var(--papel)}
+  .fseg button .cnt{font-size:11px; font-weight:600; padding:1px 6px; border-radius:999px; background:#efeef4; color:var(--t72)}
+  .fseg button.on .cnt{background:rgba(255,255,255,.22); color:var(--papel)}
+  .pill{display:inline-flex; align-items:center; gap:7px; background:var(--blanco); border:.5px solid var(--linea); border-radius:10px; padding:8px 13px; font-size:13px; font-weight:500; color:var(--t72); cursor:pointer}
+  .pill .cx{color:var(--t30)}
+  .pill.proffilter{display:inline-flex}
+  body.prof .pill.proffilter{display:none}
+
+  /* day group + rows */
+  .day{margin-bottom:26px}
+  .daylabel{font-size:12px; font-weight:600; letter-spacing:.04em; color:var(--t48); text-transform:uppercase; margin:0 0 10px 2px}
+  .rows{background:var(--blanco); border:.5px solid var(--linea); border-radius:14px; overflow:hidden}
+  .row{display:grid; grid-template-columns:78px 1.6fr 1.5fr 130px auto; align-items:center; gap:16px; padding:15px 18px; border-top:.5px solid var(--linea); cursor:pointer; transition:background .12s}
+  .row:first-child{border-top:0}
+  .row:hover{background:#fbfbfd}
+  .row.prof-col-off{grid-template-columns:78px 1.7fr 1.6fr auto}
+  .cell-time .t1{font-size:15px; font-weight:600}
+  .cell-time .t2{font-size:11.5px; color:var(--t48); margin-top:2px}
+  .cell-cli .c1{font-size:14px; font-weight:600; display:flex; align-items:center; gap:7px}
+  .cell-cli .c2{font-size:12px; color:var(--t48); margin-top:2px}
+  .cell-cli a{color:var(--t48); text-decoration:none}
+  .cell-cli a:hover{color:var(--tinta); text-decoration:underline}
+  .cell-srv .s1{font-size:13.5px; font-weight:500}
+  .cell-srv .s2{font-size:12px; color:var(--t48); margin-top:2px}
+  .cell-prof{font-size:13px; color:var(--t72)}
+  .cell-prof.hide{display:none}
+  .cell-act{display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:0}
+
+  .badge{display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; padding:4px 10px; border-radius:999px; white-space:nowrap}
+  .badge .dot{width:6px; height:6px; border-radius:50%; background:currentColor}
+  .b-pendiente{color:#7a5b12; background:#f3ead0}
+  .b-confirmado{color:#245c3b; background:#e0ecdf}
+  .b-rechazado{color:#8f322c; background:#f4e3e1}
+  .b-cancelado{color:#57545e; background:#ececef}
+  .b-completado{color:#3a3a3d; background:#eceaf0}
+  .b-ausente{color:#7a4a2a; background:#f0e4da}
+
+  .urg{font-size:11.5px; font-weight:600; color:#7a5b12; background:#f3ead0; border-radius:999px; padding:4px 10px; white-space:nowrap}
+  .urg.hot{color:#8f322c; background:#f4e3e1}
+  .flag{font-size:10.5px; font-weight:600; color:var(--t48); border:.5px solid var(--linea2); border-radius:6px; padding:2px 6px; letter-spacing:.02em}
+
+  .btn{font-family:var(--sans); font-size:12.5px; font-weight:600; border-radius:9px; padding:8px 14px; cursor:pointer; border:.5px solid var(--linea2); background:var(--blanco); color:var(--tinta); white-space:nowrap}
+  .btn:hover{background:var(--papel)}
+  .btn.solid{background:var(--tinta); color:var(--papel); border-color:var(--tinta)}
+  .btn.solid:hover{background:#2a2a2a}
+  .btn.sm{padding:7px 12px; font-size:12px}
+  .kebab{width:32px; height:32px; border-radius:8px; border:.5px solid var(--linea2); background:var(--blanco); color:var(--t72); display:grid; place-items:center; cursor:pointer; flex:none}
+  .kebab:hover{background:var(--papel); color:var(--tinta)}
+  .muted-note{font-size:12px; color:var(--t30)}
+
+  .empty{background:var(--blanco); border:.5px dashed var(--linea2); border-radius:14px; padding:40px; text-align:center; color:var(--t48); font-size:13.5px}
+
+  /* drawer */
+  .scrim{position:fixed; inset:0; background:rgba(21,21,21,.28); opacity:0; pointer-events:none; transition:opacity .18s; z-index:20}
+  .scrim.open{opacity:1; pointer-events:auto}
+  .drawer{position:fixed; top:0; right:0; height:100vh; width:436px; max-width:92vw; background:var(--blanco); border-left:.5px solid var(--linea); transform:translateX(100%); transition:transform .22s cubic-bezier(.4,0,.2,1); z-index:21; display:flex; flex-direction:column}
+  .drawer.open{transform:translateX(0)}
+  .dhead{display:flex; align-items:center; gap:12px; padding:20px 22px; border-bottom:.5px solid var(--linea)}
+  .dhead .code{font-size:13px; font-weight:600; letter-spacing:.03em}
+  .dclose{margin-left:auto; width:32px; height:32px; border-radius:8px; border:0; background:var(--papel); color:var(--t72); cursor:pointer; display:grid; place-items:center}
+  .dclose:hover{color:var(--tinta)}
+  .dbody{padding:22px; overflow:auto; flex:1}
+  .dcli{font-family:var(--serif); font-weight:600; font-size:22px; margin:0 0 4px}
+  .dmeta{display:flex; flex-direction:column; gap:2px; margin-bottom:20px}
+  .dmeta a{font-size:13px; color:var(--t72); text-decoration:none}
+  .dmeta a:hover{text-decoration:underline}
+  .drow{display:flex; justify-content:space-between; gap:16px; padding:11px 0; border-top:.5px solid var(--linea); font-size:13.5px}
+  .drow .k{color:var(--t48)}
+  .drow .v{font-weight:500; text-align:right}
+  .dsec{font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--t48); margin:24px 0 12px}
+  .tl{list-style:none; margin:0; padding:0}
+  .tl li{position:relative; padding:0 0 16px 22px}
+  .tl li::before{content:''; position:absolute; left:4px; top:4px; width:8px; height:8px; border-radius:50%; background:var(--tinta)}
+  .tl li::after{content:''; position:absolute; left:7.5px; top:12px; bottom:-4px; width:1px; background:var(--linea)}
+  .tl li:last-child{padding-bottom:0}
+  .tl li:last-child::after{display:none}
+  .tl .te{font-size:13px; font-weight:600}
+  .tl .td{font-size:12px; color:var(--t48); margin-top:1px}
+  .dact{padding:16px 22px; border-top:.5px solid var(--linea); display:flex; gap:10px; flex-wrap:wrap}
+  .dact .btn{flex:1}
+  .motivo{width:100%}
+  .motivo textarea{width:100%; font-family:var(--sans); font-size:13px; border:.5px solid var(--linea2); border-radius:9px; padding:9px 11px; resize:vertical; min-height:52px; outline:none}
+  .motivo textarea:focus{border-color:var(--tinta); box-shadow:0 0 0 3px rgba(21,21,21,.08)}
+  .confirmbar{width:100%; background:#f4e3e1; border:.5px solid #e8ccc8; border-radius:9px; padding:10px 12px; font-size:12.5px; color:#8f322c; display:flex; align-items:center; gap:10px}
+  .confirmbar span{flex:1}
+
+  @media (max-width:760px){
+    .app{grid-template-columns:1fr}
+    .side{flex-direction:row; align-items:center; border-right:0; border-bottom:.5px solid var(--linea); padding:12px 16px}
+    .brand{padding:0}
+    .nav{flex-direction:row; margin-left:16px; overflow:auto}
+    .nav a span.lbl{display:none}
+    .side .spacer{display:none}
+    .who{border-top:0; margin:0 0 0 auto; padding:0}
+    .who .wn,.who .wr{display:none}
+    .main{padding:18px 16px 60px}
+    .row,.row.prof-col-off{grid-template-columns:64px 1fr auto; gap:12px}
+    .cell-srv,.cell-prof{display:none}
+    .drawer{width:100vw}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body class="admin">
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <img src="data:image/png;base64,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" alt="">
+      <div><div class="bn">Camila González</div><div class="bt">Salón de belleza</div></div>
+    </div>
+    <nav class="nav">
+      <a class="on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span class="lbl">Turnos</span></a>
+      <a class="adminonly"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 7h-9M14 17H5M17 21a4 4 0 100-8 4 4 0 000 8zM7 11a4 4 0 100-8 4 4 0 000 8z"/></svg><span class="lbl">Servicios</span></a>
+      <a class="adminonly"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13A4 4 0 0116 11"/></svg><span class="lbl">Profesionales</span></a>
+      <a class="adminonly"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-2.82 1.17V21a2 2 0 01-4 0v-.09A1.65 1.65 0 006.6 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 8.4a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9c.14.31.22.66.22 1h.09"/></svg><span class="lbl">Configuración</span></a>
+      <a class="adminonly"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4.9 4.9l14.2 14.2M16 2v4M8 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg><span class="lbl">Excepciones</span></a>
+      <a class="profonly" style="display:none"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0116 0v1"/></svg><span class="lbl">Mi perfil</span></a>
+    </nav>
+    <div class="spacer"></div>
+    <div class="who">
+      <div class="av" id="whoAv">CG</div>
+      <div><div class="wn" id="whoName">Camila González</div><div class="wr" id="whoRole">admin</div></div>
+      <div class="lo" title="Salir"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="demo">
+      Ver como <div class="seg"><button class="on" onclick="setRole('admin')">Admin</button><button onclick="setRole('prof')">Profesional</button></div>
+      <b id="demoNote">Camila · ve todos los turnos</b>
+    </div>
+
+    <div class="head">
+      <h1 class="title">Turnos</h1>
+      <div class="sub" id="headSub"></div>
+    </div>
+
+    <div class="filters">
+      <div class="fseg" id="fseg"></div>
+      <div class="pill">Esta semana <span class="cx">▾</span></div>
+      <div class="pill proffilter">Todas las profesionales <span class="cx">▾</span></div>
+    </div>
+
+    <div id="list"></div>
+  </main>
+</div>
+
+<div class="scrim" id="scrim" onclick="closeDetail()"></div>
+<aside class="drawer" id="drawer" aria-hidden="true"></aside>
+
+<script>
+var PROFS={cg:'Camila González', rb:'Rocío Benítez'};
+var money=function(c){return '$'+(c/100).toLocaleString('es-AR')};
+function ini(n){return n.split(' ').map(function(w){return w[0]}).slice(0,2).join('')}
+
+var T=[
+ {id:1,code:'TRN-2026-0142',estado:'pendiente',dia:'hoy',ini:'09:30',fin:'10:00',dur:30,cli:'Sofía Ramírez',tel:'+5493415552847',telD:'341 555-2847',email:'sofiar@gmail.com',srv:'Perfilado de cejas',precio:800000,prof:'rb',origen:'web',fuera:false,expira:'2 h',hot:true,
+   hist:[{e:'Solicitó el turno',q:'la clienta',c:'hoy 07:41'}]},
+ {id:2,code:'TRN-2026-0143',estado:'pendiente',dia:'hoy',ini:'11:00',fin:'12:00',dur:60,cli:'Malena Ortiz',tel:'+5493414418890',telD:'341 441-8890',email:'',srv:'Manicura semipermanente',precio:1500000,prof:'cg',origen:'web',fuera:false,expira:'6 h',hot:false,
+   hist:[{e:'Solicitó el turno',q:'la clienta',c:'hoy 08:12'}]},
+ {id:3,code:'TRN-2026-0139',estado:'confirmado',dia:'hoy',ini:'14:30',fin:'15:30',dur:60,cli:'Julieta Sosa',tel:'+5493415560012',telD:'341 556-0012',email:'juli.sosa@gmail.com',srv:'Limpieza facial profunda',precio:2200000,prof:'rb',origen:'web',fuera:false,
+   hist:[{e:'Solicitó el turno',q:'la clienta',c:'ayer 19:03'},{e:'Confirmado',q:'Rocío Benítez',c:'ayer 19:40'}]},
+ {id:4,code:'TRN-2026-0141',estado:'confirmado',dia:'hoy',ini:'16:15',fin:'17:30',dur:75,cli:'Abril Medina',tel:'+5493414402231',telD:'341 440-2231',email:'',srv:'Lifting de pestañas',precio:1800000,prof:'cg',origen:'admin',fuera:true,
+   hist:[{e:'Cargado por el salón (fuera de grilla)',q:'Camila González',c:'hoy 08:55'},{e:'Confirmado',q:'Camila González',c:'hoy 08:55'}]},
+ {id:5,code:'TRN-2026-0144',estado:'pendiente',dia:'mañana',ini:'10:00',fin:'10:45',dur:45,cli:'Lucía Fernández',tel:'+5493415509987',telD:'341 550-9987',email:'',srv:'Depilación con cera',precio:1200000,prof:'rb',origen:'web',fuera:false,expira:'mañana 07:00',hot:false,
+   hist:[{e:'Solicitó el turno',q:'la clienta',c:'hoy 10:22'}]},
+ {id:6,code:'TRN-2026-0145',estado:'confirmado',dia:'mañana',ini:'12:00',fin:'13:00',dur:60,cli:'Camila Duarte',tel:'+5493414471120',telD:'341 447-1120',email:'cami.d@gmail.com',srv:'Manicura semipermanente',precio:1500000,prof:'cg',origen:'web',fuera:false,
+   hist:[{e:'Solicitó el turno',q:'la clienta',c:'hoy 09:10'},{e:'Confirmado',q:'Camila González',c:'hoy 09:31'}]},
+ {id:7,code:'TRN-2026-0130',estado:'rechazado',dia:'anteriores',ini:'—',fin:'—',dur:60,cli:'Carla Giménez',tel:'+5493415521144',telD:'341 552-1144',email:'',srv:'Uñas esculpidas',precio:2500000,prof:'cg',origen:'web',fuera:false,
+   hist:[{e:'Solicitó el turno',q:'la clienta',c:'11 ago 21:14'},{e:'No se pudo confirmar (venció)',q:'el sistema',c:'12 ago 09:14'}]},
+ {id:8,code:'TRN-2026-0128',estado:'cancelado',dia:'anteriores',ini:'—',fin:'—',dur:30,cli:'Valentina Ruiz',tel:'+5493414433092',telD:'341 443-3092',email:'',srv:'Perfilado de cejas',precio:800000,prof:'rb',origen:'web',fuera:false,
+   hist:[{e:'Solicitó el turno',q:'la clienta',c:'10 ago 15:02'},{e:'Confirmado',q:'Rocío Benítez',c:'10 ago 15:20'},{e:'Cancelado',q:'la clienta',c:'11 ago 08:40'}]},
+ {id:9,code:'TRN-2026-0122',estado:'completado',dia:'anteriores',ini:'—',fin:'—',dur:45,cli:'Florencia Díaz',tel:'+5493415588470',telD:'341 558-8470',email:'',srv:'Limpieza facial profunda',precio:2200000,prof:'cg',origen:'web',fuera:false,
+   hist:[{e:'Solicitó el turno',q:'la clienta',c:'9 ago 12:00'},{e:'Confirmado',q:'Camila González',c:'9 ago 12:30'},{e:'Completado',q:'el sistema',c:'12 ago 16:00'}]},
+ {id:10,code:'TRN-2026-0119',estado:'ausente',dia:'anteriores',ini:'—',fin:'—',dur:60,cli:'Brenda Torres',tel:'+5493414455781',telD:'341 445-5781',email:'',srv:'Lifting de pestañas',precio:1800000,prof:'rb',origen:'web',fuera:false,
+   hist:[{e:'Solicitó el turno',q:'la clienta',c:'8 ago 10:00'},{e:'Confirmado',q:'Rocío Benítez',c:'8 ago 10:15'},{e:'No asistió',q:'Rocío Benítez',c:'11 ago 17:05'}]}
+];
+
+var ESTADOS=['pendiente','confirmado','rechazado','cancelado','completado','ausente'];
+var LABEL={pendiente:'Pendiente',confirmado:'Confirmado',rechazado:'Rechazado',cancelado:'Cancelado',completado:'Completado',ausente:'Ausente'};
+var DAYS=[['hoy','Hoy · jueves 13 ago'],['mañana','Mañana · viernes 14 ago'],['anteriores','Anteriores']];
+
+var role='admin', filter='todos', openId=null;
+
+function setRole(r){
+  role=r;
+  document.body.className=r==='admin'?'admin':'prof';
+  document.getElementById('whoAv').textContent=r==='admin'?'CG':'RB';
+  document.getElementById('whoName').textContent=r==='admin'?'Camila González':'Rocío Benítez';
+  document.getElementById('whoRole').textContent=r==='admin'?'admin':'profesional';
+  document.getElementById('demoNote').textContent=r==='admin'?'Camila · ve todos los turnos':'Rocío · ve sólo sus turnos';
+  document.querySelectorAll('.demo .seg button').forEach(function(b){b.classList.toggle('on',b.textContent.toLowerCase().startsWith(r==='admin'?'admin':'prof'))});
+  document.querySelector('.nav a.profonly').style.display=r==='prof'?'flex':'none';
+  if(openId!==null){var t=T.find(function(x){return x.id===openId}); if(t && !visible(t)) closeDetail();}
+  render();
+}
+function visible(t){ if(role==='prof' && t.prof!=='rb') return false; if(filter!=='todos' && t.estado!==filter) return false; return true; }
+function scoped(){ return T.filter(function(t){return role==='admin'||t.prof==='rb'}); }
+
+function render(){
+  var sc=scoped();
+  var counts={todos:sc.length}; ESTADOS.forEach(function(e){counts[e]=sc.filter(function(t){return t.estado===e}).length});
+  var pend=counts.pendiente||0;
+  document.getElementById('headSub').textContent=pend+(pend===1?' turno pendiente':' turnos pendientes')+' por revisar';
+
+  var segs=[['todos','Todos']].concat([['pendiente','Pendientes'],['confirmado','Confirmados']]).concat([['rechazado','Rechazados'],['cancelado','Cancelados'],['completado','Completados'],['ausente','Ausentes']]);
+  document.getElementById('fseg').innerHTML=segs.map(function(s){
+    var c=counts[s[0]]||0;
+    return '<button class="'+(filter===s[0]?'on':'')+'" onclick="setFilter(\''+s[0]+'\')">'+s[1]+(c?'<span class="cnt">'+c+'</span>':'')+'</button>';
+  }).join('');
+
+  var list=sc.filter(function(t){return filter==='todos'||t.estado===filter});
+  var html='';
+  DAYS.forEach(function(d){
+    var rows=list.filter(function(t){return t.dia===d[0]});
+    if(!rows.length) return;
+    html+='<div class="day"><p class="daylabel">'+d[1]+'</p><div class="rows">'+rows.map(rowHtml).join('')+'</div></div>';
+  });
+  if(!html) html='<div class="empty">No hay turnos en esta vista.</div>';
+  document.getElementById('list').innerHTML=html;
+}
+
+function rowHtml(t){
+  var profOff=(role==='prof');
+  var right='';
+  if(t.estado==='pendiente'){
+    right='<span class="urg'+(t.hot?' hot':'')+'">vence en '+t.expira+'</span>'+
+          '<button class="btn solid sm" onclick="act(event,'+t.id+',\'aprobar\')">Aprobar</button>'+
+          '<button class="btn sm" onclick="act(event,'+t.id+',\'rechazar\')">Rechazar</button>';
+  } else if(t.estado==='confirmado'){
+    right='<span class="badge b-confirmado"><span class="dot"></span>Confirmado</span>'+
+          '<button class="kebab" onclick="openDetail(event,'+t.id+')" aria-label="Más acciones"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg></button>';
+  } else {
+    right='<span class="badge b-'+t.estado+'"><span class="dot"></span>'+LABEL[t.estado]+'</span>';
+  }
+  var flag=t.fuera?'<span class="flag" title="Cargado fuera de la grilla">fuera de horario</span>':'';
+  return '<div class="row'+(profOff?' prof-col-off':'')+'" onclick="openDetail(event,'+t.id+')">'+
+    '<div class="cell-time"><div class="t1 num">'+t.ini+'</div><div class="t2 num">'+(t.fin!=='—'?t.fin+' · '+t.dur+\"'\":t.dur+\" min\")+'</div></div>'+
+    '<div class="cell-cli"><div class="c1">'+t.cli+' '+flag+'</div><div class="c2"><a href="tel:'+t.tel+'" onclick="event.stopPropagation()">'+t.telD+'</a></div></div>'+
+    '<div class="cell-srv"><div class="s1">'+t.srv+'</div><div class="s2 num">'+money(t.precio)+'</div></div>'+
+    '<div class="cell-prof'+(profOff?' hide':'')+'">'+PROFS[t.prof]+'</div>'+
+    '<div class="cell-act">'+right+'</div></div>';
+}
+
+function setFilter(f){ filter=f; render(); }
+
+function act(e,id,action){
+  e.stopPropagation();
+  var t=T.find(function(x){return x.id===id});
+  var actor=role==='admin'?'Camila González':'Rocío Benítez';
+  if(action==='aprobar'){ t.estado='confirmado'; t.hist.push({e:'Confirmado',q:actor,c:'ahora'}); }
+  if(action==='rechazar'){ t.estado='rechazado'; t.hist.push({e:'Rechazado',q:actor,c:'ahora'}); }
+  if(action==='cancelar'){ t.estado='cancelado'; t.hist.push({e:'Cancelado',q:actor,c:'ahora'}); }
+  if(action==='ausente'){ t.estado='ausente'; t.hist.push({e:'No asistió',q:actor,c:'ahora'}); }
+  render(); if(openId===id) fillDrawer(t);
+}
+
+function openDetail(e,id){ if(e) e.stopPropagation(); openId=id; var t=T.find(function(x){return x.id===id}); fillDrawer(t); document.getElementById('scrim').classList.add('open'); document.getElementById('drawer').classList.add('open'); document.getElementById('drawer').setAttribute('aria-hidden','false'); }
+function closeDetail(){ openId=null; document.getElementById('scrim').classList.remove('open'); document.getElementById('drawer').classList.remove('open'); document.getElementById('drawer').setAttribute('aria-hidden','true'); }
+
+function fillDrawer(t){
+  var acts='';
+  if(t.estado==='pendiente'){
+    acts='<button class="btn solid" onclick="act(event,'+t.id+',\'aprobar\')">Aprobar</button>'+
+         '<button class="btn" onclick="askMotivo('+t.id+',\'rechazar\')">Rechazar</button>'+
+         '<button class="btn" onclick="askMotivo('+t.id+',\'cancelar\')">Cancelar</button>';
+  } else if(t.estado==='confirmado'){
+    acts='<button class="btn" onclick="askMotivo('+t.id+',\'cancelar\')">Cancelar</button>'+
+         '<button class="btn" onclick="act(event,'+t.id+',\'ausente\')">Marcar ausente</button>';
+  } else {
+    acts='<div class="muted-note">Turno '+LABEL[t.estado].toLowerCase()+' · sin acciones disponibles.</div>';
+  }
+  var fecha=t.dia==='hoy'?'Hoy · jueves 13 ago':t.dia==='mañana'?'Mañana · viernes 14 ago':'—';
+  var d=document.getElementById('drawer');
+  d.innerHTML=
+    '<div class="dhead"><span class="badge b-'+t.estado+'"><span class="dot"></span>'+LABEL[t.estado]+'</span>'+
+      '<span class="code num">'+t.code+'</span>'+
+      '<button class="dclose" onclick="closeDetail()" aria-label="Cerrar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>'+
+    '<div class="dbody">'+
+      '<h2 class="dcli">'+t.cli+'</h2>'+
+      '<div class="dmeta"><a href="tel:'+t.tel+'">'+t.telD+'</a>'+(t.email?'<a href="mailto:'+t.email+'">'+t.email+'</a>':'<span class="muted-note">sin email</span>')+'</div>'+
+      (t.fuera?'<div class="confirmbar" style="margin-bottom:16px"><span>Cargado fuera de la grilla habitual.</span></div>':'')+
+      '<div class="drow"><span class="k">Servicio</span><span class="v">'+t.srv+'</span></div>'+
+      '<div class="drow"><span class="k">Duración</span><span class="v num">'+t.dur+' min</span></div>'+
+      '<div class="drow"><span class="k">Precio</span><span class="v num">'+money(t.precio)+'</span></div>'+
+      '<div class="drow"><span class="k">Profesional</span><span class="v">'+PROFS[t.prof]+'</span></div>'+
+      '<div class="drow"><span class="k">Fecha</span><span class="v">'+fecha+'</span></div>'+
+      (t.ini!=='—'?'<div class="drow"><span class="k">Horario</span><span class="v num">'+t.ini+'–'+t.fin+'</span></div>':'')+
+      '<div class="drow"><span class="k">Origen</span><span class="v">'+(t.origen==='web'?'Reserva web':'Cargado en el salón')+'</span></div>'+
+      '<div class="dsec">Historial</div>'+
+      '<ul class="tl">'+t.hist.map(function(h){return '<li><div class="te">'+h.e+'</div><div class="td">'+h.q+' · '+h.c+'</div></li>'}).join('')+'</ul>'+
+    '</div>'+
+    '<div class="dact" id="dact">'+acts+'</div>';
+}
+
+function askMotivo(id,action){
+  var label=action==='rechazar'?'Rechazar turno':'Cancelar turno';
+  document.getElementById('dact').innerHTML=
+    '<div class="motivo"><textarea placeholder="Motivo (opcional) — queda en el historial"></textarea></div>'+
+    '<button class="btn solid" style="background:#8f322c;border-color:#8f322c" onclick="act(event,'+id+',\''+action+'\')">'+label+'</button>'+
+    '<button class="btn" onclick="fillDrawer(T.find(function(x){return x.id==='+id+'}))">Volver</button>';
+}
+
+setRole('admin');
+</script>
+</body>
+</html>

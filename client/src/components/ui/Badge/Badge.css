@@ -1,0 +1,49 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: var(--radio-pill);
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.badge--pendiente {
+  color: var(--color-estado-pendiente-texto);
+  background: var(--color-estado-pendiente-fondo);
+}
+
+.badge--confirmado {
+  color: var(--color-estado-confirmado-texto);
+  background: var(--color-estado-confirmado-fondo);
+}
+
+.badge--rechazado {
+  color: var(--color-estado-rechazado-texto);
+  background: var(--color-estado-rechazado-fondo);
+}
+
+.badge--cancelado {
+  color: var(--color-estado-cancelado-texto);
+  background: var(--color-estado-cancelado-fondo);
+}
+
+.badge--completado {
+  color: var(--color-estado-completado-texto);
+  background: var(--color-estado-completado-fondo);
+}
+
+.badge--ausente {
+  color: var(--color-estado-ausente-texto);
+  background: var(--color-estado-ausente-fondo);
+}

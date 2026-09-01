@@ -9,6 +9,17 @@ export interface IContactoCentro {
   direccion: string;
 }
 
+// Contador atómico del código de turno (§4/§13: DECISIÓN CERRADA,
+// `TRN-{año}-####`). Interno — no se expone en ConfiguracionPanel ni es
+// editable vía PATCH /api/admin/configuracion (editarConfiguracionSchema es
+// `.strict()` y no lo declara, mismo criterio que excluye `timezone`).
+// Opcional: no existe hasta que se crea el primer turno del año; ver
+// generarCodigoTurno en turnos.service.ts.
+export interface IContadorTurnosPorAnio {
+  anio: number;
+  ultimo: number;
+}
+
 export interface IConfiguracion extends Document<string> {
   nombre: string;
   timezone: string;
@@ -19,6 +30,7 @@ export interface IConfiguracion extends Document<string> {
   cancelacionMinimaHoras: number;
   vencimientoPendienteHoras: number;
   contacto: IContactoCentro;
+  contadorTurnosPorAnio?: IContadorTurnosPorAnio;
   creadoEn: Date;
   actualizadoEn: Date;
 }
@@ -40,6 +52,12 @@ const configuracionSchema = new Schema<IConfiguracion>(
       telefonoE164: { type: String, required: true },
       email: { type: String, required: true },
       direccion: { type: String, required: true },
+    },
+    // Sin `required` ni `default`: no existe hasta el primer turno del año
+    // (generarCodigoTurno lo inicializa con findOneAndUpdate atómico).
+    contadorTurnosPorAnio: {
+      anio: { type: Number },
+      ultimo: { type: Number },
     },
   },
   { timestamps: { createdAt: 'creadoEn', updatedAt: 'actualizadoEn' } }

@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ingresar · Camila González</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --tinta:#151515; --papel:#f8f7fb; --blanco:#ffffff;
+    --tinta-72:#4a4a4c; --tinta-48:#7c7c7e;
+    --linea:#e6e5eb; --linea-fuerte:#d4d3db;
+    --err:#8f322c; --err-bg:#f5e6e4; --err-linea:#e8ccc8;
+    --serif:'Fraunces','Playfair Display',Georgia,serif;
+    --sans:'Montserrat',system-ui,-apple-system,sans-serif;
+    --radio:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--papel); color:var(--tinta); font-family:var(--sans);
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    display:grid; place-items:center; padding:32px 20px;
+  }
+  .wrap{width:100%; max-width:376px}
+
+  .lockup{text-align:center; margin-bottom:26px}
+  .lockup img{width:72px; height:auto; display:inline-block; margin-bottom:14px}
+  .marca{
+    font-family:var(--serif); font-weight:600; font-size:25px;
+    letter-spacing:.075em; text-transform:uppercase; line-height:1; margin:0;
+  }
+  .tagline{
+    font-size:10.5px; font-weight:500; letter-spacing:.34em;
+    text-transform:uppercase; color:var(--tinta-48); margin:9px 0 0;
+  }
+
+  .card{
+    background:var(--blanco); border:.5px solid var(--linea);
+    border-radius:var(--radio); padding:30px 28px 26px;
+  }
+  .eyebrow{
+    font-size:11px; font-weight:600; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--tinta-48); text-align:center; margin:0 0 22px;
+  }
+
+  .banner{
+    display:none; align-items:center; gap:9px;
+    background:var(--err-bg); border:.5px solid var(--err-linea);
+    color:var(--err); font-size:13px; line-height:1.4;
+    border-radius:9px; padding:10px 12px; margin-bottom:18px;
+  }
+  .banner.show{display:flex}
+  .banner svg{flex:none}
+
+  .field{margin-bottom:16px}
+  .field label{
+    display:block; font-size:13px; font-weight:500; color:var(--tinta-72);
+    margin-bottom:7px; letter-spacing:.01em;
+  }
+  .input-row{position:relative}
+  input{
+    width:100%; height:44px; padding:0 14px; font-family:var(--sans);
+    font-size:15px; color:var(--tinta); background:var(--blanco);
+    border:.5px solid var(--linea-fuerte); border-radius:10px; outline:none;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input::placeholder{color:var(--tinta-48)}
+  input:hover{border-color:#c3c2cb}
+  input:focus{border-color:var(--tinta); box-shadow:0 0 0 3px rgba(21,21,21,.10)}
+  input[aria-invalid="true"]{border-color:var(--err); box-shadow:0 0 0 3px rgba(143,50,44,.10)}
+  input#pass{padding-right:44px}
+  .toggle{
+    position:absolute; right:6px; top:6px; width:32px; height:32px;
+    display:grid; place-items:center; border:0; background:transparent;
+    color:var(--tinta-48); cursor:pointer; border-radius:8px;
+  }
+  .toggle:hover{color:var(--tinta); background:var(--papel)}
+  .hint{display:none; font-size:12px; color:var(--err); margin-top:6px}
+  .hint.show{display:block}
+
+  button.submit{
+    width:100%; height:46px; margin-top:6px; border:0; border-radius:10px;
+    background:var(--tinta); color:var(--papel); font-family:var(--sans);
+    font-size:14px; font-weight:600; letter-spacing:.02em; cursor:pointer;
+    transition:background .15s, transform .05s;
+  }
+  button.submit:hover{background:#2a2a2a}
+  button.submit:active{transform:scale(.99)}
+  button.submit:focus-visible{outline:2px solid var(--tinta); outline-offset:2px}
+
+  .foot{
+    text-align:center; font-size:12px; color:var(--tinta-48);
+    margin-top:18px; line-height:1.5;
+  }
+  .foot a{color:var(--tinta-72); text-decoration:underline; text-underline-offset:2px}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="lockup">
+      <img src="data:image/png;base64,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" alt="Camila González">
+      <h1 class="marca">Camila González</h1>
+      <p class="tagline">Salón de belleza</p>
+    </div>
+
+    <section class="card" aria-label="Ingresar al panel">
+      <p class="eyebrow">Panel de gestión</p>
+
+      <div class="banner" id="banner" role="alert" aria-live="assertive">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>Email o contraseña incorrectos.</span>
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <div class="input-row">
+          <input id="email" type="email" autocomplete="username" placeholder="camila@camigonzalez.com">
+        </div>
+        <p class="hint" id="hint-email">Ingresá tu email.</p>
+      </div>
+
+      <div class="field">
+        <label for="pass">Contraseña</label>
+        <div class="input-row">
+          <input id="pass" type="password" autocomplete="current-password" placeholder="Tu contraseña">
+          <button class="toggle" id="toggle" type="button" aria-label="Mostrar contraseña">
+            <svg id="eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <p class="hint" id="hint-pass">Ingresá tu contraseña.</p>
+      </div>
+
+      <button class="submit" id="submit" type="button">Ingresar</button>
+    </section>
+
+    <p class="foot">¿Olvidaste tu contraseña? <a href="#" id="reset">Pedísela a Camila.</a></p>
+  </main>
+
+<script>
+  var email=document.getElementById('email'),
+      pass=document.getElementById('pass'),
+      banner=document.getElementById('banner'),
+      hE=document.getElementById('hint-email'),
+      hP=document.getElementById('hint-pass');
+
+  function clearField(el,hint){el.setAttribute('aria-invalid','false');hint.classList.remove('show');}
+  email.addEventListener('input',function(){clearField(email,hE);banner.classList.remove('show');});
+  pass.addEventListener('input',function(){clearField(pass,hP);banner.classList.remove('show');});
+
+  document.getElementById('toggle').addEventListener('click',function(){
+    var showing=pass.type==='text';
+    pass.type=showing?'password':'text';
+    this.setAttribute('aria-label',showing?'Mostrar contraseña':'Ocultar contraseña');
+  });
+
+  document.getElementById('submit').addEventListener('click',function(){
+    var ok=true; banner.classList.remove('show');
+    if(!email.value.trim()){email.setAttribute('aria-invalid','true');hE.classList.add('show');ok=false;}
+    if(!pass.value){pass.setAttribute('aria-invalid','true');hP.classList.add('show');ok=false;}
+    if(!ok){ (email.value.trim()?pass:email).focus(); return; }
+    banner.classList.add('show');            /* simula 401 CREDENCIALES_INVALIDAS */
+    email.setAttribute('aria-invalid','true');
+    pass.setAttribute('aria-invalid','true');
+  });
+
+  document.getElementById('reset').addEventListener('click',function(e){e.preventDefault();});
+</script>
+</body>
+</html>

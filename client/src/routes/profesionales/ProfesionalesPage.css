@@ -1,0 +1,299 @@
+/* Profesionales — panel (frontend.md §4.6). Clonado de
+   client/mockups/profesionales-camila.html: lista/tags/avatar/chips/callout
+   sobre las primitivas ya existentes (Button/Input/Switch/Drawer) y el
+   EditorHorarios compartido (nullable:false acá, sin segmentado Hereda). */
+
+.profesionales-page {
+  max-width: 980px;
+}
+
+.profesionales-page__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.profesionales-page__titulo {
+  font-size: 1.9rem;
+}
+
+.profesionales-page__sub {
+  font-size: 0.82rem;
+  color: var(--color-tinta-48);
+  margin: 0 0 1.4rem;
+}
+
+.profesionales-page__aviso,
+.profesionales-page__vacio {
+  background: var(--color-blanco);
+  border: 0.5px dashed var(--color-linea-fuerte);
+  border-radius: var(--radio-card);
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--color-tinta-48);
+  font-size: 0.85rem;
+}
+
+.profesionales-page__aviso--error {
+  background: var(--color-error-fondo);
+  border: 0.5px solid var(--color-error-linea);
+  color: var(--color-error-texto);
+}
+
+/* Lista */
+.fila-usuario-grupo {
+  background: var(--color-blanco);
+  border: var(--borde-hairline);
+  border-radius: var(--radio-card);
+  overflow: hidden;
+}
+
+.fila-usuario {
+  display: grid;
+  grid-template-columns: 2.4fr 120px 120px 110px 96px;
+  align-items: center;
+  gap: 14px;
+  padding: 0.9rem 1.1rem;
+  border-top: var(--borde-hairline);
+  cursor: pointer;
+}
+
+.fila-usuario-grupo .fila-usuario:first-child {
+  border-top: 0;
+}
+
+.fila-usuario:hover,
+.fila-usuario:focus-visible {
+  background: #fbfbfd;
+}
+
+.fila-usuario--header {
+  cursor: default;
+  background: #fbfbfd;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-tinta-48);
+}
+
+.fila-usuario--header:hover {
+  background: #fbfbfd;
+}
+
+.fila-usuario--inactivo {
+  opacity: 0.5;
+}
+
+.fila-usuario__persona {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fila-usuario__avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--color-estado-cancelado-fondo);
+  color: var(--color-estado-cancelado-texto);
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  flex: none;
+}
+
+.fila-usuario__nombre {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.fila-usuario__email {
+  font-size: 0.75rem;
+  color: var(--color-tinta-48);
+  margin-top: 2px;
+}
+
+.fila-usuario__celda {
+  font-size: 0.81rem;
+  color: var(--color-tinta-72);
+}
+
+/* Tags (Admin/Profesional, Sí/No, Activa/Inactiva) — no son EstadoTurno,
+   Badge no aplica (mismo motivo que servicios). Colores reusan tokens de
+   estado ya cotejados; "admin" es tinta sólida — ver FilaUsuario.tsx. */
+.tag-usuario {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--radio-pill);
+  white-space: nowrap;
+}
+
+.tag-usuario::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.tag-usuario--admin {
+  color: var(--color-papel);
+  background: var(--color-tinta);
+}
+
+.tag-usuario--admin::before {
+  background: var(--color-papel);
+}
+
+.tag-usuario--profesional,
+.tag-usuario--inactiva {
+  color: var(--color-estado-cancelado-texto);
+  background: var(--color-estado-cancelado-fondo);
+}
+
+.tag-usuario--atiende-si,
+.tag-usuario--activa {
+  color: var(--color-estado-confirmado-texto);
+  background: var(--color-estado-confirmado-fondo);
+}
+
+.tag-usuario--atiende-no {
+  color: var(--color-estado-ausente-texto);
+  background: var(--color-estado-ausente-fondo);
+}
+
+/* Form (drawer de alta/edición) */
+.usuario-drawer__campo {
+  margin-bottom: 1rem;
+}
+
+.usuario-drawer__grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 1rem;
+}
+
+.usuario-drawer__grid2 .usuario-drawer__campo {
+  margin-bottom: 0;
+}
+
+.usuario-drawer__ayuda {
+  font-size: 0.72rem;
+  color: var(--color-tinta-48);
+  margin: 0.4rem 0 0;
+}
+
+.usuario-drawer__seg {
+  display: inline-flex;
+  background: var(--color-papel);
+  border: var(--borde-hairline);
+  border-radius: 11px;
+  padding: 3px;
+}
+
+.usuario-drawer__seg button {
+  border: 0;
+  background: transparent;
+  font-family: var(--fuente-ui);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-tinta-72);
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.usuario-drawer__seg button.is-on {
+  background: var(--color-tinta);
+  color: var(--color-papel);
+}
+
+.usuario-drawer__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  font-size: 0.78rem;
+  font-weight: 500;
+  border: var(--borde-hairline-fuerte);
+  border-radius: var(--radio-pill);
+  padding: 0.44rem 0.8rem;
+  cursor: pointer;
+  color: var(--color-tinta-72);
+  background: var(--color-blanco);
+}
+
+.chip:hover {
+  border-color: var(--color-tinta);
+}
+
+.chip.is-on {
+  background: var(--color-tinta);
+  color: var(--color-papel);
+  border-color: var(--color-tinta);
+}
+
+.usuario-drawer__boton-ancho {
+  width: 100%;
+  justify-content: center;
+}
+
+.usuario-drawer__reset {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  border: var(--borde-hairline);
+  border-radius: var(--radio-card);
+  padding: 0.9rem;
+  margin-top: 0.6rem;
+}
+
+/* Callouts (aviso de reset + aviso de turnos futuros al desactivar) */
+.callout {
+  border-radius: 11px;
+  padding: 0.75rem 0.875rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.callout--warn {
+  background: var(--color-estado-pendiente-fondo);
+  border: 0.5px solid #e4d3a0;
+  color: var(--color-estado-pendiente-texto);
+  margin-bottom: 1rem;
+}
+
+.callout__acciones {
+  margin-top: 0.6rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+@media (max-width: 820px) {
+  .fila-usuario,
+  .fila-usuario--header {
+    grid-template-columns: 1fr auto auto;
+  }
+
+  .fila-usuario__atiende,
+  .fila-usuario__servicios {
+    display: none;
+  }
+
+  .usuario-drawer__grid2 {
+    grid-template-columns: 1fr;
+  }
+}

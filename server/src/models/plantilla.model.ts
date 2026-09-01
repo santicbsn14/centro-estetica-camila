@@ -9,6 +9,7 @@ export interface IPlantilla extends Document {
   metaNombre: string;
   metaIdioma: string;
   metaEstado: MetaEstadoPlantilla;
+  contentSid?: string; // HX... de Twilio — el ID técnico con el que se envía, distinto de metaNombre (§4)
   variables: string[]; // orden = significado: las variables de Meta son posicionales
 
   asunto?: string; // canal email
@@ -27,6 +28,7 @@ const plantillaSchema = new Schema<IPlantilla>(
     metaNombre: { type: String, required: true },
     metaIdioma: { type: String, required: true, default: 'es_AR' },
     metaEstado: { type: String, enum: ['aprobada', 'pendiente', 'rechazada'], required: true, default: 'pendiente' },
+    contentSid: { type: String },
     variables: { type: [String], required: true, default: [] },
 
     asunto: { type: String },

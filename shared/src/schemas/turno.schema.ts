@@ -19,3 +19,11 @@ export const cancelarTurnoSchema = z.object({
   token: z.string().min(1),
 });
 export type CancelarTurnoInput = z.infer<typeof cancelarTurnoSchema>;
+
+// Cancelar desde el panel (admin/profesional autenticados, §15.4) — no
+// confundir con cancelarTurnoSchema de arriba, que es la puerta pública por
+// token. Acá no hay token: la sesión ya identifica a quién cancela.
+export const cancelarTurnoPanelSchema = z.object({
+  motivo: z.string().max(200).optional(),
+});
+export type CancelarTurnoPanelInput = z.infer<typeof cancelarTurnoPanelSchema>;

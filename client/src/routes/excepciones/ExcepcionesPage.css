@@ -1,0 +1,285 @@
+/* Excepciones — panel (frontend.md §4.8). Sin mockup: reusa el shell y los
+   patrones de fila/drawer de servicios/profesionales (ServiciosPage.css/
+   ProfesionalesPage.css) — clases propias de esta pantalla, mismo criterio de
+   no compartir CSS entre pantallas que ya usan esos dos archivos. */
+
+.excepciones-page {
+  max-width: 1080px;
+}
+
+.excepciones-page__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.excepciones-page__titulo {
+  font-size: 1.9rem;
+}
+
+.excepciones-page__sub {
+  font-size: 0.82rem;
+  color: var(--color-tinta-48);
+  margin: 0 0 1.1rem;
+  max-width: 60ch;
+}
+
+.excepciones-page__filtros {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.4rem;
+}
+
+.filtro-fecha,
+.filtro-profesional {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  color: var(--color-tinta-48);
+}
+
+.filtro-fecha input,
+.filtro-profesional select {
+  border: var(--borde-hairline-fuerte);
+  border-radius: var(--radio-control);
+  padding: 0.5rem 0.65rem;
+  font-size: 0.85rem;
+  background: var(--color-blanco);
+  color: var(--color-tinta);
+  font-family: var(--fuente-ui);
+}
+
+.excepciones-page__aviso,
+.excepciones-page__vacio {
+  background: var(--color-blanco);
+  border: 0.5px dashed var(--color-linea-fuerte);
+  border-radius: var(--radio-card);
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--color-tinta-48);
+  font-size: 0.85rem;
+}
+
+.excepciones-page__aviso--error {
+  background: var(--color-error-fondo);
+  border: 0.5px solid var(--color-error-linea);
+  color: var(--color-error-texto);
+}
+
+/* Lista */
+.fila-excepcion-grupo {
+  background: var(--color-blanco);
+  border: var(--borde-hairline);
+  border-radius: var(--radio-card);
+  overflow: hidden;
+}
+
+.fila-excepcion {
+  display: grid;
+  grid-template-columns: 118px 1.3fr 1.1fr 1.4fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 0.85rem 1.1rem;
+  border-top: var(--borde-hairline);
+}
+
+.fila-excepcion-grupo .fila-excepcion:first-child {
+  border-top: 0;
+}
+
+.fila-excepcion--header {
+  background: #fbfbfd;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-tinta-48);
+}
+
+.fila-excepcion__celda {
+  font-size: 0.83rem;
+  color: var(--color-tinta-72);
+}
+
+.fila-excepcion__rango {
+  font-weight: 500;
+  color: var(--color-tinta);
+}
+
+.fila-excepcion__motivo {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fila-excepcion__sin-motivo {
+  color: var(--color-tinta-48);
+}
+
+.fila-excepcion__acciones {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.fila-excepcion__confirmar-texto {
+  font-size: 0.74rem;
+  color: var(--color-error-texto);
+  white-space: nowrap;
+}
+
+/* Tag de tipo — tres tonos del set §3 (ver mapping documentado en
+   FilaExcepcion.tsx), NO hues nuevos. */
+.tag-excepcion {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: var(--radio-pill);
+  white-space: nowrap;
+}
+
+.tag-excepcion::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.tag-excepcion--feriado {
+  color: var(--color-estado-confirmado-texto);
+  background: var(--color-estado-confirmado-fondo);
+}
+
+.tag-excepcion--vacaciones {
+  color: var(--color-estado-pendiente-texto);
+  background: var(--color-estado-pendiente-fondo);
+}
+
+.tag-excepcion--bloqueo {
+  color: var(--color-estado-rechazado-texto);
+  background: var(--color-estado-rechazado-fondo);
+}
+
+/* Form (drawer de alta/edición) */
+.excepcion-drawer__campo {
+  margin-bottom: 1rem;
+}
+
+.excepcion-drawer__opcional {
+  color: var(--color-tinta-48);
+  font-weight: 400;
+}
+
+.excepcion-drawer__ayuda {
+  font-size: 0.72rem;
+  color: var(--color-tinta-48);
+  margin: 0.4rem 0 0;
+}
+
+.excepcion-drawer__seg {
+  display: inline-flex;
+  background: var(--color-papel);
+  border: var(--borde-hairline);
+  border-radius: 11px;
+  padding: 3px;
+}
+
+.excepcion-drawer__seg button {
+  border: 0;
+  background: transparent;
+  font-family: var(--fuente-ui);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-tinta-72);
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.excepcion-drawer__seg button.is-on {
+  background: var(--color-tinta);
+  color: var(--color-papel);
+}
+
+.excepcion-drawer__select {
+  width: 100%;
+  border: var(--borde-hairline-fuerte);
+  border-radius: var(--radio-control);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.85rem;
+  font-family: var(--fuente-ui);
+  background: var(--color-blanco);
+  color: var(--color-tinta);
+}
+
+.excepcion-drawer__grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 1rem;
+}
+
+.excepcion-drawer__campo-fecha {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.excepcion-drawer__input-fecha {
+  border: var(--borde-hairline-fuerte);
+  border-radius: var(--radio-control);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.85rem;
+  font-family: var(--fuente-ui);
+  background: var(--color-blanco);
+  color: var(--color-tinta);
+}
+
+.excepcion-drawer__textarea {
+  width: 100%;
+  height: auto;
+  min-height: 3.2rem;
+  padding: 0.65rem 0.85rem;
+  resize: vertical;
+  font-family: var(--fuente-ui);
+  font-size: 0.88rem;
+}
+
+.excepcion-drawer__error {
+  font-size: 0.78rem;
+  color: var(--color-error-texto);
+  background: var(--color-error-fondo);
+  border: 0.5px solid var(--color-error-linea);
+  border-radius: var(--radio-control);
+  padding: 0.5rem 0.7rem;
+  margin: -0.3rem 0 1rem;
+}
+
+@media (max-width: 860px) {
+  .fila-excepcion,
+  .fila-excepcion--header {
+    grid-template-columns: 96px 1fr auto;
+  }
+
+  .fila-excepcion__celda:nth-child(3),
+  .fila-excepcion__motivo {
+    display: none;
+  }
+
+  .excepcion-drawer__grid2 {
+    grid-template-columns: 1fr;
+  }
+}

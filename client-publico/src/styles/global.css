@@ -1,0 +1,59 @@
+@import './tokens.css';
+
+/* Montserrat (400/500/600) + Fraunces (stand-in de Marat, §3). Idéntico
+   import al panel — mismos tokens de marca, misma fuente. */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Montserrat:wght@400;500;600&display=swap');
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* Mobile-first (frontend.md §4.10): viewport base ~420px, escala hacia
+   arriba con media queries min-width a medida que se construyan pantallas —
+   al revés del panel (desktop-first, uso de mostrador). No hay reglas
+   desktop-first acá para "corregir" en mobile. */
+body {
+  margin: 0;
+  background: var(--color-papel);
+  color: var(--color-tinta);
+  font-family: var(--fuente-ui);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--fuente-display);
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Mayúsculas SÓLO en el lockup de marca y micro-eyebrows tracked (§3) — toda
+   la UI funcional (labels, botones, errores) en sentence case. */
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}

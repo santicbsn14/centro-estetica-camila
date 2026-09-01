@@ -1,0 +1,95 @@
+/* Mi perfil — panel, cualquier usuario logueado (frontend.md §4.9). Sin
+   mockup: misma cara visual que configuración (§4.7) — layout de página en
+   secciones-card, primitivas ya cotejadas. A diferencia de Configuracion
+   (un PATCH global con dirty-tracking), acá cada sección tiene su propio
+   botón de guardar dentro de la card (tres endpoints independientes), no una
+   barra sticky al pie. */
+
+.mi-page {
+  max-width: 720px;
+}
+
+.mi-page__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.mi-page__titulo {
+  font-size: 1.9rem;
+}
+
+.mi-page__sub {
+  font-size: 0.82rem;
+  color: var(--color-tinta-48);
+  margin: 0 0 1.4rem;
+}
+
+.mi-page__aviso,
+.mi-page__vacio {
+  background: var(--color-blanco);
+  border: 0.5px dashed var(--color-linea-fuerte);
+  border-radius: var(--radio-card);
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--color-tinta-48);
+  font-size: 0.85rem;
+}
+
+.mi-page__aviso--error {
+  background: var(--color-error-fondo);
+  border: 0.5px solid var(--color-error-linea);
+  color: var(--color-error-texto);
+}
+
+.mi-page__seccion {
+  background: var(--color-blanco);
+  border: var(--borde-hairline);
+  border-radius: var(--radio-card);
+  padding: 1.375rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.mi-page__seccion-titulo {
+  font-size: 1.05rem;
+  margin: 0 0 1.1rem;
+}
+
+.mi-page__campo {
+  margin-bottom: 1rem;
+}
+
+.mi-page__campo:last-child {
+  margin-bottom: 0;
+}
+
+.mi-page__grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 1rem;
+}
+
+.mi-page__ayuda {
+  font-size: 0.72rem;
+  color: var(--color-tinta-48);
+  margin: 0.8rem 0 0;
+}
+
+/* Barra de acciones DENTRO de cada sección (no sticky global, a diferencia
+   de ConfiguracionPage.css: son tres guardados independientes, no uno). */
+.mi-page__seccion-acciones {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.1rem;
+  padding-top: 1.1rem;
+  border-top: var(--borde-hairline);
+}
+
+@media (max-width: 640px) {
+  .mi-page__grid2 {
+    grid-template-columns: 1fr;
+  }
+}

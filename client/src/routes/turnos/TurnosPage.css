@@ -1,0 +1,441 @@
+/* Turnos — panel (frontend.md §4.4). Clonado de client/mockups/turnos-camila.html:
+   layout de filtros/filas/badges/urgencia, adaptado a las primitivas ya
+   existentes (Badge/Button/Drawer) en vez de reimplementarlas acá. */
+
+.turnos-page {
+  max-width: 960px;
+}
+
+.turnos-page__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.turnos-page__titulo {
+  font-size: 1.9rem;
+}
+
+.turnos-page__sub {
+  font-size: 0.82rem;
+  color: var(--color-tinta-48);
+}
+
+.turnos-page__filtros {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.4rem;
+}
+
+/* Segmentado por estado, con contador */
+.segmentado {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  background: var(--color-blanco);
+  border: var(--borde-hairline);
+  border-radius: 11px;
+  padding: 3px;
+}
+
+.segmentado__opcion {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  font-family: var(--fuente-ui);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-tinta-72);
+  padding: 0.45rem 0.8rem;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.segmentado__opcion.is-activo {
+  background: var(--color-tinta);
+  color: var(--color-papel);
+}
+
+.segmentado__contador {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: var(--radio-pill);
+  background: var(--color-papel);
+  color: var(--color-tinta-72);
+}
+
+.segmentado__opcion.is-activo .segmentado__contador {
+  background: rgba(255, 255, 255, 0.22);
+  color: var(--color-papel);
+}
+
+.filtro-fecha,
+.filtro-profesional {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  color: var(--color-tinta-48);
+}
+
+.filtro-fecha input,
+.filtro-profesional select {
+  border: var(--borde-hairline-fuerte);
+  border-radius: var(--radio-control);
+  padding: 0.5rem 0.65rem;
+  font-size: 0.85rem;
+  background: var(--color-blanco);
+  color: var(--color-tinta);
+}
+
+.turnos-page__aviso {
+  background: var(--color-blanco);
+  border: 0.5px dashed var(--color-linea-fuerte);
+  border-radius: var(--radio-card);
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--color-tinta-48);
+  font-size: 0.85rem;
+}
+
+.turnos-page__aviso--error {
+  background: var(--color-error-fondo);
+  border: 0.5px solid var(--color-error-linea);
+  color: var(--color-error-texto);
+}
+
+.turnos-page__vacio {
+  background: var(--color-blanco);
+  border: 0.5px dashed var(--color-linea-fuerte);
+  border-radius: var(--radio-card);
+  padding: 2.5rem;
+  text-align: center;
+  color: var(--color-tinta-48);
+  font-size: 0.85rem;
+}
+
+/* Grupo de día */
+.dia-turnos {
+  margin-bottom: 1.6rem;
+}
+
+.dia-turnos__etiqueta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-tinta-48);
+  text-transform: uppercase;
+  margin: 0 0 0.6rem 0.1rem;
+}
+
+.dia-turnos__filas {
+  background: var(--color-blanco);
+  border: var(--borde-hairline);
+  border-radius: var(--radio-card);
+  overflow: hidden;
+}
+
+/* Fila de turno */
+.fila-turno {
+  display: grid;
+  grid-template-columns: 78px 1.6fr 1.5fr 130px auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1.1rem;
+  border-top: var(--borde-hairline);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.fila-turno--sin-profesional {
+  grid-template-columns: 78px 1.7fr 1.6fr auto;
+}
+
+.dia-turnos__filas .fila-turno:first-child {
+  border-top: 0;
+}
+
+.fila-turno:hover,
+.fila-turno:focus-visible {
+  background: var(--color-papel);
+}
+
+.fila-turno__hora-inicio {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.fila-turno__hora-fin {
+  font-size: 0.72rem;
+  color: var(--color-tinta-48);
+  margin-top: 2px;
+}
+
+.fila-turno__cliente-nombre {
+  font-size: 0.88rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fila-turno__telefono {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--color-tinta-48);
+  margin-top: 2px;
+  text-decoration: none;
+}
+
+.fila-turno__telefono:hover {
+  color: var(--color-tinta);
+  text-decoration: underline;
+}
+
+.fila-turno__servicio-nombre {
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.fila-turno__servicio-precio {
+  font-size: 0.76rem;
+  color: var(--color-tinta-48);
+  margin-top: 2px;
+}
+
+.fila-turno__profesional {
+  font-size: 0.82rem;
+  color: var(--color-tinta-72);
+}
+
+.fila-turno__acciones {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.flag {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--color-tinta-48);
+  border: var(--borde-hairline-fuerte);
+  border-radius: 6px;
+  padding: 1px 6px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.chip-urgencia {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-estado-pendiente-texto);
+  background: var(--color-estado-pendiente-fondo);
+  border-radius: var(--radio-pill);
+  padding: 0.25rem 0.6rem;
+  white-space: nowrap;
+}
+
+.chip-urgencia--hot {
+  color: var(--color-error-texto);
+  background: var(--color-error-fondo);
+}
+
+/* Detalle (contenido del Drawer) */
+.detalle-turno__cliente {
+  font-size: 1.3rem;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.detalle-turno__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 1.1rem;
+}
+
+.detalle-turno__meta a {
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+
+.detalle-turno__meta a:hover {
+  text-decoration: underline;
+}
+
+.detalle-turno__muted {
+  font-size: 0.78rem;
+  color: var(--color-tinta-48);
+}
+
+.detalle-turno__aviso {
+  background: var(--color-error-fondo);
+  border: 0.5px solid var(--color-error-linea);
+  color: var(--color-error-texto);
+  border-radius: var(--radio-control);
+  padding: 0.6rem 0.75rem;
+  font-size: 0.78rem;
+  margin-bottom: 1rem;
+}
+
+.detalle-turno__filas {
+  margin: 0;
+}
+
+.detalle-turno__fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0;
+  border-top: var(--borde-hairline);
+  font-size: 0.85rem;
+}
+
+.detalle-turno__fila dt {
+  color: var(--color-tinta-48);
+}
+
+.detalle-turno__fila dd {
+  margin: 0;
+  font-weight: 500;
+  text-align: right;
+}
+
+.detalle-turno__seccion {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-tinta-48);
+  margin: 1.5rem 0 0.75rem;
+}
+
+.detalle-turno__timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.detalle-turno__timeline li {
+  position: relative;
+  padding: 0 0 1rem 1.35rem;
+}
+
+.detalle-turno__timeline li::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-tinta);
+}
+
+.detalle-turno__timeline li::after {
+  content: '';
+  position: absolute;
+  left: 6.5px;
+  top: 12px;
+  bottom: -4px;
+  width: 1px;
+  background: var(--color-linea);
+}
+
+.detalle-turno__timeline li:last-child {
+  padding-bottom: 0;
+}
+
+.detalle-turno__timeline li:last-child::after {
+  display: none;
+}
+
+.detalle-turno__timeline-evento {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.detalle-turno__timeline-detalle {
+  font-size: 0.75rem;
+  color: var(--color-tinta-48);
+  margin-top: 1px;
+}
+
+/* Acciones (footer del Drawer) */
+.acciones-turno__sin-acciones {
+  font-size: 0.78rem;
+  color: var(--color-tinta-48);
+  margin: 0;
+}
+
+.acciones-turno__confirmar {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.acciones-turno__confirmar-texto {
+  font-size: 0.8rem;
+  color: var(--color-tinta-72);
+  margin: 0;
+}
+
+.acciones-turno__confirmar-botones {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.acciones-turno__confirmar-botones > * {
+  flex: 1;
+}
+
+.acciones-turno__motivo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.acciones-turno__motivo-label {
+  font-size: 0.72rem;
+  color: var(--color-tinta-48);
+}
+
+.acciones-turno__motivo textarea {
+  width: 100%;
+  font-family: var(--fuente-ui);
+  font-size: 0.82rem;
+  border: var(--borde-hairline-fuerte);
+  border-radius: var(--radio-control);
+  padding: 0.55rem 0.7rem;
+  resize: vertical;
+  outline: none;
+}
+
+.acciones-turno__motivo textarea:focus {
+  border-color: var(--color-tinta);
+  box-shadow: 0 0 0 3px rgba(21, 21, 21, 0.08);
+}
+
+@media (max-width: 760px) {
+  .fila-turno,
+  .fila-turno--sin-profesional {
+    grid-template-columns: 60px 1fr auto;
+    gap: 0.6rem;
+  }
+
+  .fila-turno__servicio,
+  .fila-turno__profesional {
+    display: none;
+  }
+}

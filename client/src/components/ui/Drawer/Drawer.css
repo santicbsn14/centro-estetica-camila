@@ -1,0 +1,102 @@
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(21, 21, 21, 0.28);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 100;
+  animation: drawer-overlay-entrar 0.18s ease;
+}
+
+.drawer {
+  width: min(460px, 92vw);
+  height: 100%;
+  background: var(--color-blanco);
+  border-left: var(--borde-hairline);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -8px 0 24px rgba(21, 21, 21, 0.08);
+  animation: drawer-entrar 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Clonado de client/mockups/{turnos,servicios,profesionales}-camila.html
+   (.scrim/.drawer con transform+opacity). El drawer se desmonta de golpe al
+   cerrar (Drawer.tsx no mantiene el nodo para animar la salida) — sólo se
+   anima la entrada. */
+@keyframes drawer-overlay-entrar {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes drawer-entrar {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer-overlay,
+  .drawer {
+    animation: none;
+  }
+}
+
+.drawer__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.375rem;
+  border-bottom: var(--borde-hairline);
+}
+
+.drawer__titulo {
+  font-size: 1.05rem;
+  margin-right: auto;
+}
+
+.drawer__cerrar {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--color-papel);
+  border: none;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-tinta-72);
+}
+
+.drawer__cerrar:hover {
+  color: var(--color-tinta);
+}
+
+.drawer__contenido {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+.drawer__footer {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.5rem;
+  border-top: var(--borde-hairline);
+}
+
+.drawer__footer > * {
+  flex: 1;
+}
+
+/* Acción destructiva secundaria (ej. "Desactivar" en servicios/usuarios,
+   frontend.md §4.5/§4.6) — clonado de `.dact .btn.danger{flex:none}` en los
+   mockups: no se estira como Cancelar/Guardar, queda a su ancho natural. */
+.drawer__footer .btn--danger-outline {
+  flex: none;
+}

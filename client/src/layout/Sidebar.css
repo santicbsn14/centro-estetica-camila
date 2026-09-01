@@ -1,0 +1,196 @@
+/* Shell del panel, clonado de client/mockups/{turnos,servicios,profesionales}-camila.html (.side). */
+
+.sidebar {
+  width: 212px;
+  flex-shrink: 0;
+  min-height: 100vh;
+  background: var(--color-blanco);
+  border-right: var(--borde-hairline);
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem 0.875rem;
+}
+
+/* Sin borde/gap propio en el mockup — el padding-bottom del bloque ya
+   separa la marca del nav. */
+.sidebar__marca {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.25rem 0.5rem 1.375rem;
+}
+
+.sidebar__monograma {
+  font-family: var(--fuente-display);
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--color-tinta);
+  line-height: 1;
+}
+
+.sidebar__wordmark {
+  font-family: var(--fuente-display);
+  font-weight: 600;
+  font-size: 0.94rem;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: var(--color-tinta);
+}
+
+.sidebar__tagline {
+  font-size: 0.56rem; /* ~9px */
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-tinta-48);
+  margin-top: 0.2rem;
+}
+
+.sidebar__nav {
+  flex: 1;
+}
+
+.sidebar__nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.56rem 0.625rem;
+  border-radius: var(--radio-control);
+  color: var(--color-tinta-72);
+  text-decoration: none;
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.sidebar__icono {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.sidebar__link:hover {
+  background: var(--color-papel);
+  color: var(--color-tinta);
+}
+
+.sidebar__link.is-activo {
+  background: var(--color-tinta);
+  color: var(--color-blanco);
+}
+
+.sidebar__usuario {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.5rem 0;
+  border-top: var(--borde-hairline);
+  margin-top: 0.625rem;
+}
+
+.sidebar__avatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--color-tinta);
+  color: var(--color-papel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.sidebar__usuario-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.sidebar__usuario-nombre {
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar__usuario-rol {
+  font-size: 0.7rem;
+  color: var(--color-tinta-48);
+}
+
+/* Clonado de .who .lo (mockups): ícono de salir, pegado al margen derecho
+   del bloque de usuario. Botón sin chrome propio, sólo el ícono. */
+.sidebar__logout {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  padding: 0.25rem;
+  background: none;
+  border: none;
+  color: var(--color-tinta-48);
+  cursor: pointer;
+}
+
+.sidebar__logout:hover {
+  color: var(--color-tinta);
+}
+
+@media (max-width: 760px) {
+  .sidebar {
+    width: auto;
+    min-height: auto;
+    flex-direction: row;
+    align-items: center;
+    border-right: 0;
+    border-bottom: var(--borde-hairline);
+    padding: 0.75rem 1rem;
+  }
+
+  .sidebar__marca {
+    padding: 0;
+  }
+
+  .sidebar__wordmark,
+  .sidebar__tagline {
+    display: none;
+  }
+
+  .sidebar__nav {
+    flex: 0 1 auto;
+    margin-left: 1rem;
+    overflow-x: auto;
+  }
+
+  .sidebar__nav ul {
+    flex-direction: row;
+  }
+
+  .sidebar__link-label {
+    display: none;
+  }
+
+  .sidebar__usuario {
+    margin-left: auto;
+    padding: 0;
+    border-top: 0;
+  }
+
+  .sidebar__usuario-texto {
+    display: none;
+  }
+}

@@ -1,0 +1,79 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: var(--radio-control);
+  font-weight: 600;
+  cursor: pointer;
+  border: var(--borde-hairline-fuerte);
+  transition: opacity 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.btn:not(:disabled):hover {
+  opacity: 0.85;
+}
+
+/* Tamaños clonados de client/mockups/{turnos,servicios,profesionales}-camila.html
+   (.btn / .btn.sm) */
+.btn--md {
+  padding: 0.5625rem 0.9375rem; /* 9px 15px */
+  font-size: 0.8125rem; /* 13px */
+}
+
+.btn--sm {
+  padding: 0.4375rem 0.75rem; /* 7px 12px */
+  font-size: 0.78rem; /* 12.5px */
+}
+
+.btn--primary {
+  background: var(--color-tinta);
+  border-color: var(--color-tinta);
+  color: var(--color-blanco);
+}
+
+.btn--secondary {
+  background: var(--color-blanco);
+  color: var(--color-tinta);
+}
+
+.btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-tinta-72);
+}
+
+/* Confirmación destructiva sólida (rechazar/cancelar turno, AccionesTurno) —
+   clonado del botón inline del mockup turnos-camila.html
+   (style="background:#8f322c;border-color:#8f322c"), no el .btn.danger
+   atenuado que usan las listas de servicios/profesionales (esas pantallas
+   todavía no están construidas; cuando lleguen, si necesitan el tratamiento
+   atenuado, es una variante nueva, no ésta). */
+.btn--danger {
+  background: var(--color-error-texto);
+  border-color: var(--color-error-texto);
+  color: var(--color-blanco);
+}
+
+/* Destructiva ATENUADA (Desactivar en servicios/usuarios, frontend.md §4.5/
+   §4.6) — distinta de --btn--danger de arriba, que es la sólida de confirmar
+   rechazar/cancelar turno. Clonada de `.btn.danger` en
+   client/mockups/{servicios,profesionales}-camila.html: sin fondo, borde y
+   texto en el tono de error, fondo atenuado sólo al hover (no el oscurecido
+   genérico por opacity que usan las demás variantes). */
+.btn--danger-outline {
+  background: var(--color-blanco);
+  border-color: var(--color-error-linea);
+  color: var(--color-error-texto);
+}
+
+.btn--danger-outline:not(:disabled):hover {
+  background: var(--color-error-fondo);
+  opacity: 1;
+}

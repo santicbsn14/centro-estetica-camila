@@ -1,0 +1,146 @@
+/* Configuración del centro — panel, admin (frontend.md §4.7). Sin mockup:
+   misma cara visual que servicios/profesionales (§4.5/§4.6), reusando las
+   primitivas ya cotejadas en vez de clonar de un HTML. Página de ajustes en
+   secciones-card, no un drawer — el editor de horarios tiene su propio CSS
+   (components/EditorHorarios/EditorHorarios.css), acá sólo el layout de la
+   página. */
+
+.configuracion-page {
+  max-width: 720px;
+}
+
+.configuracion-page__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.configuracion-page__titulo {
+  font-size: 1.9rem;
+}
+
+.configuracion-page__sub {
+  font-size: 0.82rem;
+  color: var(--color-tinta-48);
+  margin: 0 0 1.4rem;
+}
+
+.configuracion-page__aviso,
+.configuracion-page__vacio {
+  background: var(--color-blanco);
+  border: 0.5px dashed var(--color-linea-fuerte);
+  border-radius: var(--radio-card);
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--color-tinta-48);
+  font-size: 0.85rem;
+}
+
+.configuracion-page__aviso--error {
+  background: var(--color-error-fondo);
+  border: 0.5px solid var(--color-error-linea);
+  color: var(--color-error-texto);
+}
+
+/* Secciones */
+.configuracion-page__seccion {
+  background: var(--color-blanco);
+  border: var(--borde-hairline);
+  border-radius: var(--radio-card);
+  padding: 1.375rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.configuracion-page__seccion-titulo {
+  font-size: 1.05rem;
+  margin: 0 0 1.1rem;
+}
+
+.configuracion-page__subtitulo {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-tinta-48);
+  margin: 1.3rem 0 0.7rem;
+}
+
+.configuracion-page__campo {
+  margin-bottom: 1rem;
+}
+
+.configuracion-page__campo:last-child {
+  margin-bottom: 0;
+}
+
+.configuracion-page__grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 1rem;
+}
+
+.configuracion-page__grid-reglas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 20px;
+}
+
+.configuracion-page__unidad {
+  font-size: 0.78rem;
+  color: var(--color-tinta-48);
+}
+
+.configuracion-page__ayuda {
+  font-size: 0.72rem;
+  color: var(--color-tinta-48);
+  margin: 0.4rem 0 0;
+}
+
+/* Barra de acciones — sticky al pie del viewport mientras se scrollea la
+   página (no hay drawer/footer fijo acá, es una página larga). */
+.configuracion-page__acciones {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: var(--color-papel);
+  border: var(--borde-hairline);
+  border-radius: var(--radio-card);
+  padding: 0.9rem 1.1rem;
+  margin-top: 0.5rem;
+  box-shadow: 0 -6px 18px rgba(21, 21, 21, 0.06);
+}
+
+.configuracion-page__nota {
+  font-size: 0.76rem;
+  color: var(--color-tinta-48);
+  margin: 0;
+}
+
+.configuracion-page__botones {
+  display: flex;
+  gap: 0.5rem;
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  .configuracion-page__grid2,
+  .configuracion-page__grid-reglas {
+    grid-template-columns: 1fr;
+  }
+
+  .configuracion-page__acciones {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .configuracion-page__botones {
+    justify-content: flex-end;
+  }
+}

@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profesionales · Panel Camila González</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --tinta:#151515; --papel:#f8f7fb; --blanco:#ffffff;
+    --t72:#4a4a4c; --t48:#7c7c7e; --t30:#a9a8b0;
+    --linea:#e6e5eb; --linea2:#d4d3db;
+    --err:#8f322c; --err-bg:#f5e6e4; --err-l:#e8ccc8;
+    --warn:#7a5b12; --warn-bg:#f3ead0; --warn-l:#e4d3a0;
+    --serif:'Fraunces','Playfair Display',Georgia,serif;
+    --sans:'Montserrat',system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--papel); color:var(--tinta); font-family:var(--sans); -webkit-font-smoothing:antialiased}
+  .num{font-variant-numeric:tabular-nums}
+  .app{display:grid; grid-template-columns:212px 1fr; min-height:100vh}
+  .side{background:var(--blanco); border-right:.5px solid var(--linea); display:flex; flex-direction:column; padding:20px 14px}
+  .brand{display:flex; align-items:center; gap:10px; padding:4px 8px 22px}
+  .brand img{width:34px; height:auto}
+  .brand .bn{font-family:var(--serif); font-weight:600; font-size:15px; letter-spacing:.02em; line-height:1}
+  .brand .bt{font-size:9px; font-weight:500; letter-spacing:.22em; text-transform:uppercase; color:var(--t48); margin-top:3px}
+  .nav{display:flex; flex-direction:column; gap:2px}
+  .nav a{display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; font-size:13.5px; font-weight:500; color:var(--t72); text-decoration:none; cursor:pointer}
+  .nav a .ic{width:17px; height:17px; flex:none; opacity:.85}
+  .nav a:hover{background:var(--papel)}
+  .nav a.on{background:var(--tinta); color:var(--papel)}
+  .side .spacer{flex:1}
+  .who{display:flex; align-items:center; gap:10px; padding:10px 8px; border-top:.5px solid var(--linea); margin-top:10px}
+  .who .av{width:32px; height:32px; border-radius:50%; background:var(--tinta); color:var(--papel); display:grid; place-items:center; font-size:12px; font-weight:600}
+  .who .wn{font-size:12.5px; font-weight:600; line-height:1.2}
+  .who .wr{font-size:11px; color:var(--t48)}
+  .who .lo{margin-left:auto; color:var(--t48); cursor:pointer; display:grid; place-items:center}
+  .who .lo:hover{color:var(--tinta)}
+
+  .main{padding:26px 30px 60px; min-width:0}
+  .head{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:6px}
+  .title{font-family:var(--serif); font-weight:600; font-size:30px; margin:0}
+  .sub{font-size:13px; color:var(--t48); margin:0 0 22px}
+  .btn{font-family:var(--sans); font-size:13px; font-weight:600; border-radius:10px; padding:9px 15px; cursor:pointer; border:.5px solid var(--linea2); background:var(--blanco); color:var(--tinta); white-space:nowrap; display:inline-flex; align-items:center; gap:7px}
+  .btn:hover{background:var(--papel)}
+  .btn.solid{background:var(--tinta); color:var(--papel); border-color:var(--tinta)}
+  .btn.solid:hover{background:#2a2a2a}
+  .btn.danger{color:var(--err); border-color:var(--err-l)}
+  .btn.danger:hover{background:var(--err-bg)}
+  .btn.ghost{border-color:transparent; background:transparent}
+  .btn.ghost:hover{background:var(--papel)}
+
+  .rows{background:var(--blanco); border:.5px solid var(--linea); border-radius:14px; overflow:hidden}
+  .row{display:grid; grid-template-columns:2.4fr 120px 120px 110px 96px; align-items:center; gap:14px; padding:14px 18px; border-top:.5px solid var(--linea); cursor:pointer; transition:background .12s}
+  .row.hd{cursor:default; background:#fbfbfd; font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--t48)}
+  .row.hd:hover{background:#fbfbfd}
+  .row:not(.hd):hover{background:#fbfbfd}
+  .row.off{opacity:.5}
+  .person{display:flex; align-items:center; gap:12px}
+  .person .av{width:38px; height:38px; border-radius:50%; background:#ececef; color:#57545e; display:grid; place-items:center; font-size:13px; font-weight:600; flex:none}
+  .rn{font-size:14px; font-weight:600}
+  .re{font-size:12px; color:var(--t48); margin-top:2px}
+  .cell{font-size:13px; color:var(--t72)}
+  .tag{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; padding:3px 10px; border-radius:999px}
+  .tag .dot{width:6px; height:6px; border-radius:50%; background:currentColor}
+  .t-admin{color:#26215c; background:#eeedfe}
+  .t-prof{color:#57545e; background:#ececef}
+  .t-si{color:#245c3b; background:#e0ecdf}
+  .t-no{color:#7a4a2a; background:#f0e4da}
+  .t-act{color:#245c3b; background:#e0ecdf}
+  .t-ina{color:#57545e; background:#ececef}
+
+  .scrim{position:fixed; inset:0; background:rgba(21,21,21,.28); opacity:0; pointer-events:none; transition:opacity .18s; z-index:20}
+  .scrim.open{opacity:1; pointer-events:auto}
+  .drawer{position:fixed; top:0; right:0; height:100vh; width:492px; max-width:94vw; background:var(--blanco); border-left:.5px solid var(--linea); transform:translateX(100%); transition:transform .22s cubic-bezier(.4,0,.2,1); z-index:21; display:flex; flex-direction:column}
+  .drawer.open{transform:translateX(0)}
+  .dhead{display:flex; align-items:center; gap:12px; padding:20px 22px; border-bottom:.5px solid var(--linea)}
+  .dhead h2{font-family:var(--serif); font-weight:600; font-size:20px; margin:0}
+  .dclose{margin-left:auto; width:32px; height:32px; border-radius:8px; border:0; background:var(--papel); color:var(--t72); cursor:pointer; display:grid; place-items:center}
+  .dclose:hover{color:var(--tinta)}
+  .dbody{padding:22px; overflow:auto; flex:1}
+  .dact{padding:16px 22px; border-top:.5px solid var(--linea); display:flex; gap:10px; align-items:center}
+  .dact .btn.grow{flex:1; justify-content:center}
+
+  .fld{margin-bottom:16px}
+  .fld>label{display:block; font-size:13px; font-weight:500; color:var(--t72); margin-bottom:7px}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  input[type=text],input[type=email],input[type=password],input[type=number]{width:100%; font-family:var(--sans); font-size:14px; color:var(--tinta); background:var(--blanco); border:.5px solid var(--linea2); border-radius:10px; padding:0 13px; height:42px; outline:none; transition:border-color .15s, box-shadow .15s}
+  input:focus{border-color:var(--tinta); box-shadow:0 0 0 3px rgba(21,21,21,.08)}
+  input[aria-invalid=true]{border-color:var(--err); box-shadow:0 0 0 3px rgba(143,50,44,.10)}
+  .hint{display:none; font-size:12px; color:var(--err); margin-top:6px}
+  .hint.show{display:block}
+  .help{font-size:11.5px; color:var(--t48); margin-top:6px}
+
+  .switch{display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none}
+  .switch input{position:absolute; opacity:0; width:0; height:0}
+  .track{width:38px; height:22px; border-radius:999px; background:var(--linea2); position:relative; transition:background .15s; flex:none}
+  .track::after{content:''; position:absolute; width:18px; height:18px; border-radius:50%; background:#fff; top:2px; left:2px; transition:left .15s}
+  .switch input:checked + .track{background:var(--tinta)}
+  .switch input:checked + .track::after{left:18px}
+  .switch .sl{font-size:13.5px; font-weight:500}
+
+  .seg2{display:inline-flex; background:var(--papel); border:.5px solid var(--linea); border-radius:11px; padding:3px}
+  .seg2 button{border:0; background:transparent; font-family:var(--sans); font-size:12.5px; font-weight:600; color:var(--t72); padding:8px 16px; border-radius:8px; cursor:pointer}
+  .seg2 button.on{background:var(--tinta); color:var(--papel)}
+
+  .chips{display:flex; flex-wrap:wrap; gap:8px}
+  .chip{font-size:12.5px; font-weight:500; border:.5px solid var(--linea2); border-radius:999px; padding:7px 13px; cursor:pointer; user-select:none; color:var(--t72); background:var(--blanco); display:inline-flex; align-items:center; gap:6px}
+  .chip:hover{border-color:var(--tinta)}
+  .chip.on{background:var(--tinta); color:var(--papel); border-color:var(--tinta)}
+  .chip .ck{width:13px; height:13px; opacity:0}
+  .chip.on .ck{opacity:1}
+
+  .sched{margin-top:8px; border:.5px solid var(--linea); border-radius:12px; overflow:hidden}
+  .day{border-top:.5px solid var(--linea)}
+  .day:first-child{border-top:0}
+  .day.on{background:#fbfbfd}
+  .dayhd{display:flex; align-items:center; gap:11px; padding:11px 14px}
+  .dayhd .nm{font-size:13.5px; font-weight:500; width:42px}
+  .dayhd .closed{font-size:12px; color:var(--t30)}
+  .blocks{padding:0 14px 12px 67px; display:flex; flex-direction:column; gap:8px}
+  .block{display:flex; align-items:center; gap:8px}
+  .block input[type=time]{font-family:var(--sans); font-size:13px; border:.5px solid var(--linea2); border-radius:8px; padding:7px 9px; outline:none; color:var(--tinta)}
+  .block input[type=time]:focus{border-color:var(--tinta); box-shadow:0 0 0 3px rgba(21,21,21,.08)}
+  .block .sepd{color:var(--t48); font-size:13px}
+  .block .rm{width:28px; height:28px; border-radius:7px; border:.5px solid var(--linea2); background:var(--blanco); color:var(--t48); cursor:pointer; display:grid; place-items:center}
+  .block .rm:hover{color:var(--err); border-color:var(--err-l)}
+  .addblock{font-size:12px; font-weight:600; color:var(--t72); background:none; border:0; cursor:pointer; padding:2px 0; display:inline-flex; align-items:center; gap:5px}
+  .addblock:hover{color:var(--tinta)}
+  .schederr{background:var(--err-bg); border:.5px solid var(--err-l); color:var(--err); font-size:12.5px; border-radius:9px; padding:9px 12px; margin-top:12px; display:none}
+  .schederr.show{display:block}
+
+  .callout{border-radius:11px; padding:12px 14px; font-size:12.5px; line-height:1.5; margin-top:8px}
+  .callout.warn{background:var(--warn-bg); border:.5px solid var(--warn-l); color:var(--warn)}
+  .reset-box{border:.5px solid var(--linea); border-radius:11px; padding:14px; margin-top:8px; display:none}
+  .reset-box.show{display:block}
+
+  .toast{position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--tinta); color:var(--papel); font-size:13px; font-weight:500; padding:11px 18px; border-radius:10px; opacity:0; pointer-events:none; transition:opacity .18s, transform .18s; z-index:30; display:flex; align-items:center; gap:9px}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  @media (max-width:820px){
+    .app{grid-template-columns:1fr}
+    .side{flex-direction:row; align-items:center; border-right:0; border-bottom:.5px solid var(--linea); padding:12px 16px}
+    .brand{padding:0}.nav{flex-direction:row; margin-left:16px; overflow:auto}.nav a span.lbl{display:none}
+    .side .spacer{display:none}.who .wn,.who .wr{display:none}.who{margin-left:auto}
+    .main{padding:18px 16px 60px}
+    .row,.row.hd{grid-template-columns:1fr auto auto}.row .cell.svc,.row .cell.att{display:none}
+    .drawer{width:100vw}.grid2{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><img src="data:image/png;base64,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" alt=""><div><div class="bn">Camila González</div><div class="bt">Salón de belleza</div></div></div>
+    <nav class="nav">
+      <a><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span class="lbl">Turnos</span></a>
+      <a><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 7h-9M14 17H5M17 21a4 4 0 100-8 4 4 0 000 8zM7 11a4 4 0 100-8 4 4 0 000 8z"/></svg><span class="lbl">Servicios</span></a>
+      <a class="on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87"/></svg><span class="lbl">Profesionales</span></a>
+      <a><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82M4.6 9A1.65 1.65 0 013 8.4"/></svg><span class="lbl">Configuración</span></a>
+      <a><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M4.9 4.9l14.2 14.2M16 2v4M8 2v4"/></svg><span class="lbl">Excepciones</span></a>
+    </nav>
+    <div class="spacer"></div>
+    <div class="who"><div class="av">CG</div><div><div class="wn">Camila González</div><div class="wr">admin</div></div><div class="lo" title="Salir"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg></div></div>
+  </aside>
+
+  <main class="main">
+    <div class="head">
+      <h1 class="title">Profesionales</h1>
+      <button class="btn solid" onclick="openNew()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nueva profesional</button>
+    </div>
+    <p class="sub" id="sub"></p>
+    <div class="rows" id="rows"></div>
+  </main>
+</div>
+
+<div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer" aria-hidden="true"></aside>
+<div class="toast" id="toast"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg><span id="toastMsg"></span></div>
+
+<script>
+var DIAS=[['Lun',1],['Mar',2],['Mié',3],['Jue',4],['Vie',5],['Sáb',6],['Dom',0]];
+var SERVICIOS=[{id:'s1',n:'Perfilado de cejas'},{id:'s2',n:'Manicura semipermanente'},{id:'s3',n:'Limpieza facial profunda'},{id:'s4',n:'Lifting de pestañas'},{id:'s5',n:'Uñas esculpidas'},{id:'s6',n:'Depilación con cera'}];
+function ini(n){return n.split(' ').map(function(w){return w[0]}).slice(0,2).join('')}
+function svcName(id){var s=SERVICIOS.find(function(x){return x.id===id});return s?s.n:id}
+
+var manana=[{dia:2,bloques:[{desde:'09:00',hasta:'13:00'},{desde:'15:00',hasta:'19:00'}]},{dia:4,bloques:[{desde:'09:00',hasta:'13:00'}]},{dia:6,bloques:[{desde:'09:00',hasta:'13:00'}]}];
+var full=[{dia:1,bloques:[{desde:'09:00',hasta:'13:00'},{desde:'15:00',hasta:'20:00'}]},{dia:3,bloques:[{desde:'09:00',hasta:'13:00'},{desde:'15:00',hasta:'20:00'}]},{dia:5,bloques:[{desde:'09:00',hasta:'13:00'},{desde:'15:00',hasta:'20:00'}]}];
+
+var U=[
+ {id:1,nombre:'Camila González',email:'camila@camigonzalez.com',rol:'admin',atiende:true,servicios:['s1','s2','s3','s4','s5','s6'],horarios:full,tel:'+5493415551000',telD:'341 555-1000',activo:true,futuros:5},
+ {id:2,nombre:'Rocío Benítez',email:'rocio@camigonzalez.com',rol:'profesional',atiende:true,servicios:['s1','s3','s4','s6'],horarios:manana,tel:'+5493415552847',telD:'341 555-2847',activo:true,futuros:3},
+ {id:3,nombre:'Malena Ríos',email:'malena@camigonzalez.com',rol:'profesional',atiende:true,servicios:['s2','s5'],horarios:[{dia:2,bloques:[{desde:'14:00',hasta:'20:00'}]},{dia:4,bloques:[{desde:'14:00',hasta:'20:00'}]}],tel:'+5493414418890',telD:'341 441-8890',activo:true,futuros:0},
+ {id:4,nombre:'Daniela Paz',email:'daniela@camigonzalez.com',rol:'profesional',atiende:false,servicios:['s3'],horarios:[{dia:6,bloques:[{desde:'10:00',hasta:'14:00'}]}],tel:'+5493415509987',telD:'341 550-9987',activo:true,futuros:0}
+];
+
+function render(){
+  var act=U.filter(function(u){return u.activo}).length;
+  document.getElementById('sub').textContent=U.length+' usuarios · '+act+' activos';
+  var body=U.map(function(u){
+    var rol=u.rol==='admin'?'<span class="tag t-admin"><span class="dot"></span>Admin</span>':'<span class="tag t-prof"><span class="dot"></span>Profesional</span>';
+    var att=u.atiende?'<span class="tag t-si"><span class="dot"></span>Sí</span>':'<span class="tag t-no"><span class="dot"></span>No</span>';
+    var est=u.activo?'<span class="tag t-act"><span class="dot"></span>Activa</span>':'<span class="tag t-ina"><span class="dot"></span>Inactiva</span>';
+    return '<div class="row'+(u.activo?'':' off')+'" onclick="openEdit('+u.id+')">'+
+      '<div class="person"><div class="av">'+ini(u.nombre)+'</div><div><div class="rn">'+u.nombre+'</div><div class="re">'+u.email+'</div></div></div>'+
+      '<div>'+rol+'</div>'+
+      '<div class="cell att">'+att+'</div>'+
+      '<div class="cell svc num">'+u.servicios.length+' servicios</div>'+
+      '<div>'+est+'</div></div>';
+  }).join('');
+  var hd='<div class="row hd"><div>Profesional</div><div>Rol</div><div>Toma turnos</div><div>Servicios</div><div>Estado</div></div>';
+  document.getElementById('rows').innerHTML=hd+body;
+}
+
+/* editor de horarios (nullable=false: sin toggle hereda) */
+var sched={};
+function schedFrom(horarios){var m={};DIAS.forEach(function(d){m[d[1]]={on:false,blocks:[]}});if(horarios){horarios.forEach(function(h){m[h.dia]={on:true,blocks:h.bloques.map(function(b){return {desde:b.desde,hasta:b.hasta}})}})}return m;}
+function toMin(t){if(!t)return null;var p=t.split(':');return (+p[0])*60+(+p[1]);}
+function renderSched(){
+  var wrap=document.getElementById('schedWrap');if(!wrap)return;
+  wrap.innerHTML=DIAS.map(function(d){
+    var st=sched[d[1]];var on=st.on;
+    var blocks=on?'<div class="blocks">'+st.blocks.map(function(b,i){return '<div class="block"><input type="time" value="'+b.desde+'" onchange="setBlk('+d[1]+','+i+',\'desde\',this.value)"><span class="sepd">a</span><input type="time" value="'+b.hasta+'" onchange="setBlk('+d[1]+','+i+',\'hasta\',this.value)"><button class="rm" onclick="rmBlk('+d[1]+','+i+')" aria-label="Quitar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>'}).join('')+'<button class="addblock" onclick="addBlk('+d[1]+')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>Agregar bloque</button></div>':'';
+    return '<div class="day'+(on?' on':'')+'"><div class="dayhd"><label class="switch"><input type="checkbox" '+(on?'checked':'')+' onchange="toggleDay('+d[1]+',this.checked)"><span class="track"></span></label><span class="nm">'+d[0]+'</span>'+(on?'':'<span class="closed">no trabaja</span>')+'</div>'+blocks+'</div>';
+  }).join('');
+}
+function toggleDay(dia,on){sched[dia].on=on;if(on&&sched[dia].blocks.length===0)sched[dia].blocks=[{desde:'09:00',hasta:'13:00'}];renderSched();}
+function addBlk(dia){sched[dia].blocks.push({desde:'15:00',hasta:'20:00'});renderSched();}
+function rmBlk(dia,i){sched[dia].blocks.splice(i,1);if(sched[dia].blocks.length===0)sched[dia].on=false;renderSched();}
+function setBlk(dia,i,k,v){sched[dia].blocks[i][k]=v;}
+function validateSched(){
+  var days=DIAS.filter(function(d){return sched[d[1]].on});
+  if(days.length===0)return 'Marcá al menos un día de trabajo.';
+  for(var j=0;j<days.length;j++){var d=days[j];var bl=sched[d[1]].blocks.slice().sort(function(a,b){return toMin(a.desde)-toMin(b.desde)});
+    for(var i=0;i<bl.length;i++){if(toMin(bl[i].hasta)<=toMin(bl[i].desde))return d[0]+': el fin tiene que ser posterior al inicio.';if(i>0&&toMin(bl[i].desde)<toMin(bl[i-1].hasta))return d[0]+': hay bloques que se solapan.';}}
+  return null;
+}
+
+/* servicios multiselect */
+var selSvc=[];
+function renderSvc(){document.getElementById('svcChips').innerHTML=SERVICIOS.map(function(s){var on=selSvc.indexOf(s.id)>=0;return '<span class="chip'+(on?' on':'')+'" onclick="toggleSvc(\''+s.id+'\')"><svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>'+s.n+'</span>'}).join('');}
+function toggleSvc(id){var i=selSvc.indexOf(id);if(i>=0)selSvc.splice(i,1);else selSvc.push(id);renderSvc();}
+
+/* drawer */
+var editing=null, rolSel='profesional';
+function setRol(r){rolSel=r;document.querySelectorAll('#rolSeg button').forEach(function(b){b.classList.toggle('on',b.dataset.r===r)});}
+function drawerHTML(u){
+  var isNew=!u;
+  u=u||{nombre:'',email:'',rol:'profesional',atiende:true,servicios:[],horarios:null,tel:'',telD:'',activo:true,futuros:0};
+  return ''+
+  '<div class="dhead"><h2>'+(isNew?'Nueva profesional':'Editar profesional')+'</h2><button class="dclose" onclick="closeDrawer()" aria-label="Cerrar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>'+
+  '<div class="dbody">'+
+    '<div class="grid2">'+
+      '<div class="fld"><label for="f_nom">Nombre</label><input type="text" id="f_nom" value="'+u.nombre.replace(/"/g,"&quot;")+'" placeholder="Nombre y apellido"><p class="hint" id="h_nom"></p></div>'+
+      '<div class="fld"><label for="f_tel">Teléfono</label><input type="text" id="f_tel" value="'+u.telD+'" placeholder="341 555-0000"><p class="help">Le avisa cuando entra un turno nuevo.</p></div>'+
+    '</div>'+
+    '<div class="fld"><label for="f_mail">Email <span style="color:var(--t48);font-weight:400">(es su usuario de acceso)</span></label><input type="email" id="f_mail" value="'+u.email+'" placeholder="nombre@camigonzalez.com"><p class="hint" id="h_mail"></p>'+(isNew?'':'<p class="help">Cambiar el email cambia con qué se loguea esta profesional.</p>')+'</div>'+
+    '<div class="grid2">'+
+      '<div class="fld"><label>Rol</label><div class="seg2" id="rolSeg"><button data-r="profesional" onclick="setRol(\'profesional\')">Profesional</button><button data-r="admin" onclick="setRol(\'admin\')">Admin</button></div></div>'+
+      '<div class="fld"><label>Toma turnos</label><label class="switch" style="height:42px"><input type="checkbox" id="f_att" '+(u.atiende?'checked':'')+'><span class="track"></span><span class="sl">Aparece en la web</span></label><p class="help">Desactivá para que no tome turnos nuevos sin dar de baja la cuenta.</p></div>'+
+    '</div>'+
+    '<div class="fld"><label>Servicios que presta</label><div class="chips" id="svcChips"></div></div>'+
+    '<div class="fld"><label>Horario de trabajo</label><div class="sched" id="schedWrap"></div><div class="schederr" id="schedErr"></div></div>'+
+    (isNew
+      ? '<div class="fld"><label for="f_pass">Contraseña inicial</label><input type="password" id="f_pass" placeholder="Mínimo 8 caracteres"><p class="help">Se la comunicás por fuera. Ella puede cambiarla después.</p><p class="hint" id="h_pass"></p></div>'
+      : '<div class="fld"><label>Contraseña</label><button class="btn" onclick="showReset()" style="width:100%;justify-content:center">Resetear contraseña</button>'+
+        '<div class="reset-box" id="resetBox"><div class="fld" style="margin-bottom:10px"><label for="f_np">Nueva contraseña</label><input type="password" id="f_np" placeholder="Mínimo 8 caracteres"></div><div class="callout warn">Al resetear, se cierran las sesiones abiertas de la profesional.</div><button class="btn solid" style="width:100%;justify-content:center;margin-top:10px" onclick="doReset()">Guardar contraseña nueva</button></div></div>')+
+  '</div>'+
+  '<div class="dact">'+
+    (isNew?'':'<button class="btn danger" onclick="tryDeactivate('+u.id+')">'+(u.activo?'Desactivar':'Activar')+'</button>')+
+    '<button class="btn grow" onclick="closeDrawer()">Cancelar</button>'+
+    '<button class="btn solid grow" onclick="save('+(isNew?'null':u.id)+')">Guardar</button>'+
+  '</div>';
+}
+function openNew(){editing=null;selSvc=[];sched=schedFrom(null);document.getElementById('drawer').innerHTML=drawerHTML(null);openDrawer();setRol('profesional');renderSvc();renderSched();}
+function openEdit(id){var u=U.find(function(x){return x.id===id});editing=id;selSvc=u.servicios.slice();sched=schedFrom(u.horarios);document.getElementById('drawer').innerHTML=drawerHTML(u);openDrawer();setRol(u.rol);renderSvc();renderSched();}
+function openDrawer(){document.getElementById('scrim').classList.add('open');document.getElementById('drawer').classList.add('open');document.getElementById('drawer').setAttribute('aria-hidden','false');}
+function closeDrawer(){document.getElementById('scrim').classList.remove('open');document.getElementById('drawer').classList.remove('open');document.getElementById('drawer').setAttribute('aria-hidden','true');}
+function toast(m){var t=document.getElementById('toast');document.getElementById('toastMsg').textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},2100);}
+
+function showReset(){document.getElementById('resetBox').classList.add('show');}
+function doReset(){var np=document.getElementById('f_np');if(!np.value||np.value.length<8){np.setAttribute('aria-invalid','true');return;}closeDrawer();toast('Contraseña actualizada · comunicásela a la profesional');}
+
+function tryDeactivate(id){
+  var u=U.find(function(x){return x.id===id});
+  if(u.activo && u.futuros>0){
+    var box=document.querySelector('#drawer .dbody');
+    var c=document.getElementById('deactWarn');
+    if(!c){ c=document.createElement('div'); c.id='deactWarn'; c.className='callout warn'; box.insertBefore(c, box.firstChild); box.scrollTop=0; }
+    c.innerHTML=u.nombre+' tiene <b>'+u.futuros+' turnos futuros</b>. Desactivarla no los cancela — reasignalos o cancelalos por WhatsApp.<div style="margin-top:10px;display:flex;gap:8px"><button class="btn danger" onclick="doDeactivate('+id+')">Desactivar igual</button><button class="btn ghost" onclick="this.closest(\'.callout\').remove()">Volver</button></div>';
+    return;
+  }
+  doDeactivate(id);
+}
+function doDeactivate(id){var u=U.find(function(x){return x.id===id});u.activo=!u.activo;render();closeDrawer();toast(u.activo?'Profesional activada':'Profesional desactivada');}
+
+function save(id){
+  var nom=document.getElementById('f_nom'), mail=document.getElementById('f_mail');
+  var hn=document.getElementById('h_nom'), hm=document.getElementById('h_mail');
+  [nom,mail].forEach(function(el){el.setAttribute('aria-invalid','false')}); hn.classList.remove('show'); hm.classList.remove('show');
+  if(!nom.value.trim()){nom.setAttribute('aria-invalid','true');hn.textContent='Poné el nombre.';hn.classList.add('show');return;}
+  if(!mail.value.trim()){mail.setAttribute('aria-invalid','true');hm.textContent='Poné el email.';hm.classList.add('show');return;}
+  var dup=U.some(function(x){return x.id!==id && x.email.toLowerCase()===mail.value.trim().toLowerCase()});
+  if(dup){mail.setAttribute('aria-invalid','true');hm.textContent='Ya hay una cuenta con ese email.';hm.classList.add('show');return;}
+  if(id===null){var p=document.getElementById('f_pass');if(!p.value||p.value.length<8){p.setAttribute('aria-invalid','true');document.getElementById('h_pass').textContent='Mínimo 8 caracteres.';document.getElementById('h_pass').classList.add('show');return;}}
+  var err=validateSched();if(err){var b=document.getElementById('schedErr');b.textContent=err;b.classList.add('show');return;}
+  closeDrawer();toast(id?'Cambios guardados':'Profesional creada');
+}
+
+render();
+</script>
+</body>
+</html>
