@@ -2625,3 +2625,48 @@ si molesta, se acota con filtros de path por service más adelante.
 versiona — GitHub Push Protection ya bloqueó un push con `TWILIO_ACCOUNT_SID`
 en `server/.env`. Valores reales sólo en la pestaña Environment de cada service
 en Render. En el repo, sólo `.env.example` sin valores.
+
+### 2026-09-01 — Consolidación del repo: un solo `.git` en la raíz, sin secretos
+
+**Qué se implementó:** el árbol tenía DOS repos git — uno en la raíz y otro
+anidado en `server/` (repo dentro de repo). Se dejó **un único `.git`, en la
+raíz**, con toda la historia limpia de `.env` y `node_modules`.
+
+**Diagnóstico previo (antes de tocar nada):**
+- Repo raíz: 3 commits (`3e76c76` → `6254f20` → `792c581`), sin remote, 37
+  archivos trackeados. Búsqueda sobre todos los trees de la historia: **ningún
+  `.env` ni `node_modules/` jamás versionado**. Historia sana.
+- Repo anidado `server/.git`: HEAD en `6188b4a` ("commit inicial sin secretos",
+  sin padre — ya reescrito). Remote `github.com/santicbsn14/CamilaGonzalez-Api`.
+  El tree del HEAD ya no tenía `.env`, pero **el reflog conservaba dos commits
+  colgados (`5cb97da`, `897a144`) que SÍ contenían `server/.env`** con el
+  `TWILIO_ACCOUNT_SID`. El push a GitHub lo frenó Push Protection: el secreto
+  nunca llegó al remote, sólo vivía en el object store local de `server/.git`.
+
+**Decisión: NO `git filter-repo`. Se conservan los 3 commits de la raíz + un
+commit nuevo encima.** Motivo: la historia de la raíz está verificadamente
+limpia — no hay secreto que purgar, `filter-repo` reescribiría hashes a cambio
+de nada. El `.env` sólo existió en los commits colgados de `server/.git`;
+`rm -rf server/.git` los destruye por completo (más contundente que
+`filter-repo`) y de paso elimina el repo anidado, que había que sacar igual.
+
+**Pasos:**
+1. `rm -rf server/.git` + `rm server/.gitignore` (se unifica en la raíz).
+2. `.gitignore` raíz reescrito: `node_modules/`, `dist/`, `build/`,
+   `*.tsbuildinfo`, `.env` + `.env.*` + `**/.env` + `**/.env.*`,
+   `!.env.example` + `!**/.env.example`, `*.log`, `.DS_Store`, `coverage/`.
+3. `git add -A` + commit `2bbbded` (187 archivos: server completo, client,
+   client-publico, shared) sobre la historia existente.
+
+**Verificación (toda OK):**
+- `git ls-files | grep -E '(\.env$|node_modules)'` → vacío.
+- `git ls-files | grep '\.env\.example'` → los 3 (`server/`, `client/`,
+  `client-publico/`).
+- Barrido de `git ls-tree -r` sobre `git rev-list --all` → ningún `.env` ni
+  `node_modules/` en ningún commit de la historia final.
+- Único `.git`: `./.git`. Sin remote (queda a criterio de Santiago: reusar
+  `CamilaGonzalez-Api` renombrado o repo nuevo del monorepo).
+
+**No se corrió** `typecheck`/tests: la tarea no tocó código, sólo plumbing de
+git y `.gitignore`. **No se rotó** el Twilio Auth Token (se evalúa aparte).
+**No se usó** el link "allow the secret" de GitHub.
