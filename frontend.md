@@ -2906,21 +2906,25 @@ YA rinde el lockup en producción, (b) un glifo oscuro sobre transparente
 desaparece en la tab de un browser con tema oscuro. Si aparece el PNG oficial de
 la hoja de marca, reemplaza a este sin más.
 
-**⚠ REVISAR EN WEB — rubro: "Salón de belleza" vs "Centro de estética".**
-El prompt de la tarea pedía el texto con **"Centro de estética"**. Pero el rubro
-de cara a la clienta en TODO el material del repo es **"Salón de belleza"**:
-§3 (lockup de marca CERRADO: "CAMILA GONZÁLEZ / SALÓN DE BELLEZA") y
-`ReservaPage.tsx:207` (`<div className="bt">Salón de belleza</div>`).
-"Centro de estética" sólo aparece en prosa interna (`CLAUDE.md`,
-`modelo-datos-turnos.md`), nunca como descriptor de marca. Siguiendo la regla de
-la tarea ("si en la propuesta el rubro figura distinto, usá el término de la
-propuesta, no inventes"), se usó **"Salón de belleza"** en `description`,
-`og:description` y `noscript`. **Santiago: confirmá contra
-`propuesta_camiGonzalez_Belleza.docx` y el campo industria/descripción del Trust
-Hub Business Profile de Twilio.** Si el perfil de Twilio dice otra cosa
-(incluido "Centro de estética"), hay que editar 3 strings en `index.html` para
-que matcheen LITERAL — el `.docx` no está en el repo, no se pudo verificar acá.
-Ciudad ("Rosario, Argentina") es consistente en todo el repo, no se tocó.
+**⚠ RESUELTO EN WEB (rubro + ciudad)** — ajuste posterior, decidido en Web:
+
+- *Rubro:* verificado contra la propuesta firmada (`propuesta_camiGonzalez_Belleza.docx`,
+  disponible en el chat de arquitectura) — es MUDA en rubro: se refiere al
+  negocio como "tu centro" genérico, la marca es sólo "Camila González Belleza".
+  Ningún término contradice el contrato. El árbitro es el Trust Hub Business
+  Profile de Twilio, que tiene cargado **"Centro de estética"**. Decisión:
+  meta/og/noscript usan "Centro de estética" para matchear el perfil (es lo que
+  el revisor compara). El tagline "Salón de belleza" del header/§3 NO se toca —
+  es marca, no clasificación de rubro.
+- *Ciudad:* corregida de "Rosario" a **"Villa Constitución, Santa Fe"**. La
+  ubicación real del negocio es Villa Constitución (Santa Fe, Argentina);
+  "Rosario" era un dato heredado incorrecto del contexto del proyecto (aparece
+  también en §1). Sólo se corrigió en el meta/noscript de `index.html` en esta
+  tarea; §1 queda con el dato viejo, corregir aparte si molesta.
+- *Strings finales* (meta description / og:description / noscript):
+  "Camila González Belleza — Centro de estética en Villa Constitución, Santa Fe,
+  Argentina. Reservá tu turno online." El nombre sigue consistente en
+  title/og:title/header/meta.
 
 **Cierre:** `npm run build --workspace=client-publico` limpio (tsc --noEmit +
 vite build, 173 módulos, `dist/index.html` 0.99 kB, favicon copiado a `dist/`).
