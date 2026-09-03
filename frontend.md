@@ -72,7 +72,7 @@ toque construir — mensaje para Claude Code + guión de prueba.
 
 ---
 
-## §3 Sistema de diseño — tokens base (CERRADO salvo fuente display)
+## §3 Sistema de diseño — tokens base (CERRADO)
 
 Marca: monocromo de alto contraste, sin color de acento (hoja de marca). La UI
 deriva una paleta funcional desaturada por encima de los 2 colores.
@@ -87,7 +87,11 @@ Estados de turno (texto / fondo de badge):
 Error de formulario: #8f322c / #f5e6e4 · linea #e8ccc8
 ```
 
-Tipografía: display = Fraunces (serif, Google Fonts) · UI = Montserrat (400/500/600). DECISIÓN CERRADA 2026-08-25: la marca original usa "Marat Bold" (hoja de marca), pero se descartó gestionar la licencia webfont — costo/gestión innecesarios para el sitio. Fraunces queda como tipografía display DEFINITIVA, no stand-in. Nada que revisar en el futuro sobre esto.
+**Tipografía:** display = Fraunces (serif, Google Fonts) · UI = Montserrat
+(400/500/600). DECISIÓN CERRADA 2026-08-25: la marca original usa "Marat Bold"
+(hoja de marca), pero se descartó gestionar la licencia webfont — costo/gestión
+innecesarios para el sitio. Fraunces queda como tipografía display DEFINITIVA,
+no stand-in. Nada que revisar en el futuro sobre esto.
 
 Mayúsculas SÓLO en el lockup de marca (CAMILA GONZÁLEZ / SALÓN DE BELLEZA) y
 micro-eyebrows tracked. Toda la UI funcional (labels, botones, errores) en
@@ -137,7 +141,7 @@ por codigo, guards. mkcert/https-en-dev = camino opcional de alta fidelidad, fue
 del crítico.
 
 Design system: tokens de §3 como CSS vars en `:root` + Montserrat/Fraunces
-(stand-in de Marat). Primitivas extraídas de los mockups, reusadas en todo el
+(Fraunces es la tipografía display definitiva, ver §3). Primitivas extraídas de los mockups, reusadas en todo el
 panel: Button, Input, Switch, Badge(estado), Drawer, Toast, y el **editor de
 horarios** compartido (nullable configurable, §4.5).
 
@@ -325,8 +329,8 @@ PENDIENTE de implementación:
 - Date-picker debe permitir rango en el pasado (listado sin clamp inferior, §15.6).
 ### Pendientes abiertos
 
-- **Marat Bold — licencia webfont.** Verificar si Camila tiene kit web (woff2).
-  Si no, cerrar fallback serif (candidato Fraunces). Bloquea congelar §3.
+- ~~Marat Bold — licencia webfont.~~ CERRADO 2026-08-25: Fraunces queda como
+  tipografía display definitiva (ver §3). No se gestiona la licencia de Marat.
 - **Manejo de `409 ESTADO_INVALIDO`** en transiciones del panel (impl, 4.4).
 - **429 en login** (`DEMASIADOS_INTENTOS`) (impl, 4.3).
 - **Date-picker con rango en pasado** para históricos (impl, 4.4).
@@ -626,6 +630,30 @@ scaffolding). Consume (§15.1/15.2/15.3, todos públicos, sin auth):
 4. Éxito: resumen + aviso de que la confirmación y el link de cancelación llegan
    por WhatsApp. Sin mostrar tokenGestion ni ningún dato interno (nunca viaja en
    la respuesta 201, §15.1).
+
+BUG CORREGIDO 2026-09-03 — posicionamiento del sheet (ver bitácora §5 del mismo
+día para el detalle de implementación). `ReservaPage.css` tenía `.scrim`/`.sheet`
+en `position:absolute` dentro de `.app` (`min-height:100vh`, el contenedor que
+scrollea) ⇒ el sheet se anclaba a `bottom:0` del DOCUMENTO, no del viewport
+visible — con la grilla de horarios scrolleada, el sheet aparecía fuera de vista.
+CONTRATO VIGENTE: `.scrim`/`.sheet` en `position:fixed` (anclado al viewport real,
+no al contenedor), `.app` sin `position:relative` (era lo que causaba el anclaje
+incorrecto). Scroll-lock del fondo mientras el sheet está abierto:
+`body.sheet-abierta{overflow:hidden}` toggleado desde `ReservaPage.tsx` con
+`useEffect([sheetAbierto])` (cleanup al cerrar/desmontar). Cualquier futuro
+bottom-sheet de la pública debe seguir este mismo patrón de positioning.
+
+Sello de marca real (reemplaza el monograma recortado del PDF de los mockups
+v1). Assets: `logo_sm.png`(180px)/`logo_md.png`(400px)/`logo_lg.png`(800px),
+PNG RGBA transparente, servidos desde `client-publico/public/` (junto a
+`favicon.png`, raíz servida por Vite/`dist/`). Uso:
+- Header: `<img src="/logo_sm.png">` centrado SOLO (sin texto al lado — el sello
+  ya trae el nombre adentro; se sacó el lockup improvisado de disco+texto que
+  tenía antes).
+- Hero del catálogo (arriba del paso 1, antes de "Reservá tu turno"): `logo_lg`.
+- Éxito: `logo_lg` arriba; el check pasó de círculo verde separado a un SVG chico
+  inline dentro del `<h1>` (evita redundancia visual con el sello).
+Los 3 `<img>` con `alt="Camila González · Salón de belleza"`.
 
 MANEJO DE 409 SLOT_OCUPADO (corrección sobre el mockup — el mockup lo dispara al
 tocar el slot para simplificar la demo; el real ocurre en el submit del PASO 3):
@@ -2928,3 +2956,138 @@ la hoja de marca, reemplaza a este sin más.
 
 **Cierre:** `npm run build --workspace=client-publico` limpio (tsc --noEmit +
 vite build, 173 módulos, `dist/index.html` 0.99 kB, favicon copiado a `dist/`).
+
+---
+
+### 2026-09-03 (Claude Code) — Bottom sheet a position:fixed + sello de marca real (client-publico, §4.11)
+
+Dos cambios en `client-publico/`, ambos con referencia visual en
+`mockups/reserva-camila-v2.html` (`.scrim`/`.sheet` para el fix, `.hero`/
+`.success`/`.toprow` para el logo).
+
+**1 — BUG: el bottom sheet del paso 3 quedaba fuera de vista con la grilla
+scrolleada.**
+
+Causa: `.scrim` y `.sheet` estaban con `position: absolute` dentro de `.app`,
+que tiene `min-height: 100vh` y es el contenedor que scrollea. Con una grilla
+de horarios larga, `.sheet` (anclado a `bottom: 0` del contenedor, no del
+viewport) se dibujaba al fondo del documento; la clienta scrolleaba, elegía un
+slot y el sheet aparecía abajo de todo, fuera de la vista.
+
+Fix (mockup v2, sección "FIX del bug" del `<style>`):
+- `.scrim` → `position: fixed` (era `absolute`); z-index 10 → 30.
+- `.sheet` → `position: fixed; left: 50%; bottom: 0; width: 100%; max-width:
+  460px; transform: translateX(-50%) translateY(100%)`. Antes era `absolute;
+  left: 0; right: 0`. `max-height` pasó de `88%` a `88vh` (ahora relativo al
+  viewport). z-index 11 → 31. `.sheet--open` → `transform: translateX(-50%)
+  translateY(0)` (antes sólo `translateY(0)`).
+- `.app` perdió `position: relative` (ya no hace falta un contenedor posicionado
+  y su presencia era justamente lo que anclaba mal al sheet).
+- Scroll-lock del fondo: nueva regla `body.sheet-abierta { overflow: hidden }`
+  (equivale a `body.locked` del mockup). `ReservaPage.tsx` togglea esa clase con
+  un `useEffect([sheetAbierto])` — la agrega al abrir, el cleanup la saca al
+  cerrar o al desmontar.
+
+**Archivos:** `src/routes/reserva/ReservaPage.css` (`.app`, `.scrim`, `.sheet`,
+nueva `body.sheet-abierta`), `src/routes/reserva/ReservaPage.tsx` (useEffect de
+scroll-lock).
+
+**2 — LOGO: sello de marca real (`mockups/logo_{sm,md,lg}.png`) en header, hero
+y éxito.**
+
+- Assets: los 3 PNG copiados a `client-publico/public/` (junto a `favicon.png`),
+  servidos por Vite en la raíz (`/logo_sm.png`, etc.). Verificado que el build
+  los copia a `dist/`.
+- Header: se sacó el lockup tipográfico improvisado (disco "cg" + `<div>` con
+  "Camila González" / "Salón de belleza") y quedó `<img src="/logo_sm.png">`
+  centrado y solo — el sello ya trae el nombre arqueado. `.lockup` pasó a
+  `flex: 1; justify-content: center`; se agregó `.toprow-spacer` (32px) para
+  equilibrar el botón "volver" y mantener el sello centrado (igual que el
+  mockup). Se borraron las reglas `.lockup .cg/.bn/.bt`.
+- Hero del catálogo (paso 1): nuevo `<div class="hero">` con `logo_lg` (118px)
+  sobre "Reservá tu turno" + subtítulo. Reglas `.hero`/`.hero img`/`.hero h1`/
+  `.hero p` clonadas del mockup v2. `p.sub` quedó sin uso y se eliminó;
+  `h1.title` se mantiene (lo usa la grilla, paso 2).
+- Pantalla de éxito: `logo_lg` (104px) arriba; el check dejó de ser el círculo
+  verde separado (`.success .check`, regla eliminada) y pasó a ser un `<svg
+  class="chk">` inline dentro del `<h1>` (`display: flex; gap: 8px`), color
+  `--color-estado-confirmado-texto`.
+- Todos los `<img>` con `alt="Camila González · Salón de belleza"`.
+
+**Archivos:** `src/routes/reserva/ReservaPage.tsx` (header + hero),
+`src/routes/reserva/components/Exito.tsx` (logo + check inline),
+`src/routes/reserva/ReservaPage.css` (`.lockup`, `.toprow-spacer`, `.hero`,
+`.success`), `client-publico/public/logo_{sm,md,lg}.png` (nuevos).
+
+**Tests / typecheck:** `npm run typecheck` (shared+server+client+client-publico)
+limpio. `npm run build --workspace=client-publico` limpio (173 módulos, CSS
+10.79 kB, los 3 logos en `dist/`). Sin cambio de conteo: **127 server + 10
+shared** (no se tocó server/shared; `client-publico` sigue sin tests unitarios,
+igual que el resto del front — la barra sigue siendo typecheck + build + guión
+manual). §14 sin cambios.
+
+**Guión de prueba manual:**
+
+Levantar: `npm run dev` desde la raíz (panel :5173 + server :4000) y, en otra
+terminal, `npm run dev --workspace=client-publico` (:5174). Necesita el panel
+con catálogo sembrado (un servicio activo + una profesional que lo presta,
+"atiende", con horario semanal) para que la pública tenga datos reales.
+
+1. **El bug, reproducción + fix (caso crítico de esta tarea):** en
+   `http://localhost:5174`, elegir servicio → profesional. En la grilla, si hay
+   pocos días, forzar una grilla larga bajando `antelacionMinimaHoras` a 0 y
+   subiendo `ventanaMaximaDias` en Configuración del panel, o sembrando más
+   disponibilidad. Scrollear la grilla hasta el fondo. Tocar un slot de los de
+   más abajo → **el sheet "Confirmá tu turno" tiene que aparecer anclado al pie
+   de la pantalla, visible de inmediato, sin necesidad de scrollear**. El fondo
+   NO scrollea mientras el sheet está abierto (probar arrastrando el fondo:
+   queda fijo). Cerrar con el scrim o "Cancelar" → el fondo vuelve a scrollear y
+   queda en la misma posición.
+   - Antes del fix (para entender qué se corrigió): el sheet se dibujaba al
+     final del documento; tras scrollear y elegir un slot abajo, el sheet
+     quedaba fuera del viewport y había que seguir scrolleando para encontrarlo.
+2. **Sello en el header:** en cualquier paso, el header muestra el sello
+   circular `logo_sm` centrado, sin texto al lado. En el paso 2, con el botón
+   "volver" visible a la izquierda, el sello sigue centrado (no se corre).
+3. **Hero del catálogo:** paso 1, arriba de "Reservá tu turno", el sello grande
+   `logo_lg` centrado.
+4. **Pantalla de éxito:** completar una reserva. Arriba, el sello grande; el
+   título "¡Listo, la enviamos!" con un tilde (check) chico inline a la
+   izquierda, verde, sin círculo separado.
+5. **Accesibilidad:** los 3 `<img>` exponen `alt="Camila González · Salón de
+   belleza"` (inspeccionar / lector de pantalla).
+6. **Responsive:** a ~360px y a ~460px el sello no se desborda; el sheet ocupa
+   el ancho de la columna (máx. 460px) centrado, no todo el viewport en
+   pantallas anchas.
+
+**⚠ REVISAR EN WEB — desincronización de `frontend.md` + corrección citada
+inexistente:**
+
+- El prompt de esta tarea cita como fuente de verdad "frontend.md §4.11 (la
+  corrección fechada 2026-09-02, al final de la sección)". **Esa corrección no
+  existe** — ni en el archivo (§4.11 termina en "Rate limits a tener en
+  cuenta…") ni en ningún commit del historial (`git log -S "2026-09-02"` vacío).
+  El trabajo se hizo igual, sin ambigüedad, a partir del texto del prompt + el
+  mockup v2 (`mockups/reserva-camila-v2.html`), que sí modela exactamente el fix
+  (`.scrim`/`.sheet` fixed, `body.locked`) y el uso del logo. Pero conviene
+  incorporar esa decisión a §4.11 en Web para que quede el rastro.
+- Al empezar, el working tree de `frontend.md` tenía cambios sin commitear que
+  **borraban las dos entradas de bitácora del 2026-09-01** (index.html estático
+  + favicon para Twilio), que sí están commiteadas en `6c93646` y `9ab0cb3`,
+  mientras sumaba pulido de redacción en §3 (formato de "Tipografía", cierre del
+  pendiente de Marat). Parece un `frontend.md` traído desde Web que quedó
+  atrasado respecto del trabajo de Claude Code. Por decisión de Santiago
+  (2026-09-03) se restauraron esas dos entradas desde git antes de agregar ésta
+  — quedan las tres, en orden, arriba. Falta reconciliar en Web: el §3 pulido
+  del working tree probablemente quiere conservarse.
+
+RESUELTO EN WEB 2026-09-03: ambos puntos cerrados. (1) La corrección de §4.11
+(bug del sheet + logo real) fue redactada y agregada a la sección en esta pasada
+— no existía porque quedó pendiente de pegar tras editarse en Web; el código ya
+implementado coincide con lo que la corrección ahora documenta, no hizo falta
+cambiar nada de lo construido. (2) `frontend.md` reconciliado manteniendo las
+tres entradas de bitácora (2026-09-01 ×2 + 2026-09-03) y el pulido de §3 (Fraunces
+definitivo, título de sección limpiado de "salvo fuente display"). Causa raíz:
+edité una copia del `.md` sin pedir sincronización previa del repo, que ya tenía
+bitácora nueva escrita por Claude Code. Iremos con sincronizar el repo ANTES de
+cualquier edición en Web de acá en más.

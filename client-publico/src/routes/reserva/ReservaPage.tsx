@@ -67,6 +67,14 @@ export function ReservaPage() {
 
   useEffect(() => () => clearTimeout(toastTimer.current), []);
 
+  // Scroll-lock del fondo mientras el sheet está abierto (mockup v2:
+  // body.locked). El cleanup lo saca al cerrar o al desmontar.
+  useEffect(() => {
+    if (!sheetAbierto) return;
+    document.body.classList.add('sheet-abierta');
+    return () => document.body.classList.remove('sheet-abierta');
+  }, [sheetAbierto]);
+
   // --- Carga inicial del catálogo (una sola vez) ---
   useEffect(() => {
     const controller = new AbortController();
@@ -199,14 +207,9 @@ export function ReservaPage() {
             </svg>
           </button>
           <div className="lockup">
-            <div className="cg" aria-hidden="true">
-              cg
-            </div>
-            <div>
-              <div className="bn">Camila González</div>
-              <div className="bt">Salón de belleza</div>
-            </div>
+            <img src="/logo_sm.png" alt="Camila González · Salón de belleza" />
           </div>
+          <div className="toprow-spacer" aria-hidden="true" />
         </div>
         <div className="steps">
           <i className={paso >= 1 ? 'on' : ''} />
@@ -218,8 +221,11 @@ export function ReservaPage() {
       <main>
         {paso === 1 && (
           <>
-            <h1 className="title">Reservá tu turno</h1>
-            <p className="sub">Elegí un servicio, después con quién y a qué hora. Sin registrarte.</p>
+            <div className="hero">
+              <img src="/logo_lg.png" alt="Camila González · Salón de belleza" />
+              <h1>Reservá tu turno</h1>
+              <p>Elegí un servicio, después con quién y a qué hora. Sin registrarte.</p>
+            </div>
             <Catalogo
               servicios={servicios}
               servicioAbiertoId={servicioAbiertoId}

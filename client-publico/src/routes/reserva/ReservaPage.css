@@ -4,7 +4,11 @@
    tenía el mockup (--tinta, --t72, --ok, --err, etc. pasan a ser --color-…
    y --fuente-…). Clases nuevas sin equivalente en el mockup (estado de
    carga/error, banner de error del sheet, botón de texto) porque el mockup
-   no modelaba red. */
+   no modelaba red.
+
+   2026-09-03: bottom sheet a position:fixed + scroll-lock del fondo, y sello
+   de marca real (mockups/logo_*.png) en header / hero / éxito — referencia
+   mockups/reserva-camila-v2.html (frontend.md §4.11). */
 
 .app {
   max-width: 460px;
@@ -13,7 +17,13 @@
   background: var(--color-papel);
   display: flex;
   flex-direction: column;
-  position: relative;
+}
+
+/* Scroll-lock del fondo mientras el bottom sheet está abierto (mockup v2:
+   body.locked). Sin esto, con la grilla scrolleada, el fondo sigue
+   scrolleando detrás del sheet. */
+body.sheet-abierta {
+  overflow: hidden;
 }
 
 /* Header */
@@ -31,6 +41,10 @@ header.top {
   align-items: center;
   gap: 10px;
 }
+.toprow-spacer {
+  width: 32px;
+  flex: none;
+}
 .back {
   width: 32px;
   height: 32px;
@@ -47,38 +61,17 @@ header.top {
 .back.back--show {
   display: flex;
 }
+/* Sello de marca (mockups/logo_sm.png) centrado y solo — el logo ya trae el
+   nombre "CAMILA GONZÁLEZ / SALÓN DE BELLEZA", no lleva texto al lado. El
+   spacer de 32px equilibra el botón "volver" para que el sello quede centrado. */
 .lockup {
+  flex: 1;
   display: flex;
-  align-items: center;
-  gap: 9px;
+  justify-content: center;
 }
-.lockup .cg {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: var(--color-tinta);
-  color: var(--color-papel);
-  display: grid;
-  place-items: center;
-  font-family: var(--fuente-display);
-  font-weight: 600;
-  font-size: 12px;
-  flex: none;
-}
-.lockup .bn {
-  font-family: var(--fuente-display);
-  font-weight: 600;
-  font-size: 14px;
-  letter-spacing: 0.02em;
-  line-height: 1;
-}
-.lockup .bt {
-  font-size: 8px;
-  font-weight: 500;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--color-tinta-48);
-  margin-top: 2px;
+.lockup img {
+  height: 38px;
+  width: auto;
 }
 .steps {
   display: flex;
@@ -103,11 +96,31 @@ h1.title {
   font-size: 23px;
   margin: 2px 0 4px;
 }
-p.sub {
+
+/* Hero del catálogo (paso 1): sello grande (mockups/logo_lg.png) sobre el
+   título. Clonado de .hero del mockup v2. */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px 0 24px;
+}
+.hero img {
+  width: 118px;
+  height: auto;
+  margin-bottom: 14px;
+}
+.hero h1 {
+  font-size: 23px;
+  margin: 0 0 6px;
+}
+.hero p {
   font-size: 13px;
   color: var(--color-tinta-48);
-  margin: 0 0 20px;
+  margin: 0;
   line-height: 1.5;
+  max-width: 280px;
 }
 
 /* Estados de carga/error — comunes a catálogo y grilla */
@@ -325,37 +338,42 @@ p.sub {
   font-size: 13px;
 }
 
-/* Bottom sheet */
+/* Bottom sheet — FIX (mockup v2 §4.11): position:fixed anclado al viewport
+   real, NO position:absolute dentro de .app (que tiene min-height:100vh y
+   scrollea). Con absolute, si la clienta scrollea la grilla larga y elige un
+   slot, el sheet se dibuja al fondo del contenedor y queda fuera de vista.
+   Fixed + el scroll-lock de body.sheet-abierta lo anclan siempre a la vista. */
 .scrim {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: rgba(21, 21, 21, 0.32);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s;
-  z-index: 10;
+  z-index: 30;
 }
 .scrim.scrim--open {
   opacity: 1;
   pointer-events: auto;
 }
 .sheet {
-  position: absolute;
-  left: 0;
-  right: 0;
+  position: fixed;
+  left: 50%;
   bottom: 0;
+  width: 100%;
+  max-width: 460px;
   background: var(--color-blanco);
   border-radius: 20px 20px 0 0;
-  transform: translateY(100%);
+  transform: translateX(-50%) translateY(100%);
   transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 11;
-  max-height: 88%;
+  z-index: 31;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 -8px 30px rgba(21, 21, 21, 0.12);
 }
 .sheet.sheet--open {
-  transform: translateY(0);
+  transform: translateX(-50%) translateY(0);
 }
 .sheet-handle {
   width: 36px;
@@ -521,20 +539,21 @@ input[aria-invalid='true'] {
   text-align: center;
   padding: 36px 8px 10px;
 }
-.success .check {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: var(--color-estado-confirmado-fondo);
-  border: 0.5px solid #c7ddc4;
-  color: var(--color-estado-confirmado-texto);
-  display: grid;
-  place-items: center;
-  margin-bottom: 18px;
+.success img {
+  width: 104px;
+  height: auto;
+  margin-bottom: 16px;
 }
 .success h1 {
   font-size: 24px;
   margin: 0 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.success h1 .chk {
+  color: var(--color-estado-confirmado-texto);
+  flex: none;
 }
 .success p {
   font-size: 13.5px;
