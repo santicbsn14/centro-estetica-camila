@@ -178,14 +178,14 @@ describe('POST /api/turnos — grilla según origen', () => {
     expect(res.body.codigo).toBe('GRILLA_INVALIDA');
   });
 
-  it("origen 'admin' fuera de grilla que no solapa ⇒ 201 con fueraDeHorario:true", async () => {
+  it("origen 'admin' (sesión detectada) + respetarGrilla:false, fuera de grilla, no solapa ⇒ 201 confirmado con fueraDeHorario:true", async () => {
     await crearConfig();
     const servicio = await crearServicio();
     const profesional = await crearProfesional({ servicios: [servicio._id] });
 
-    // No hay ruta admin todavía (auth pendiente en otro paso): se llama al
-    // service directo, tal como se hizo con verificarOwnershipTurno antes de
-    // que existiera la ruta de panel.
+    // Se llama al service directo pasando `usuarioSiHaySesion` a mano — el
+    // recorrido completo por HTTP con sesión real está cubierto en
+    // turnos.creacion.origen.test.ts (§15.1).
     const resultado = await crearTurno({
       servicioId: servicio._id.toString(),
       profesionalId: profesional._id.toString(),
@@ -193,10 +193,13 @@ describe('POST /api/turnos — grilla según origen', () => {
       nombre: BODY_BASE.nombre,
       telefono: BODY_BASE.telefono,
       email: BODY_BASE.email,
-      origen: 'admin',
+      respetarGrilla: false,
+      usuarioSiHaySesion: { id: new Types.ObjectId().toString(), nombre: 'Admin Test', rol: 'admin', atiende: false },
     });
 
-    expect(resultado.estado).toBe('pendiente');
+    // origen:'admin' nace confirmado directamente (§15.1) — ya no pasa por
+    // pendiente, a diferencia de web.
+    expect(resultado.estado).toBe('confirmado');
     expect(resultado.fueraDeHorario).toBe(true);
   });
 });
@@ -225,7 +228,7 @@ describe('POST /api/turnos — el solape no lo pisa ni el admin', () => {
         inicio: inicio.toISOString(),
         nombre: 'Otra clienta',
         telefono: '3364123456',
-        origen: 'admin',
+        usuarioSiHaySesion: { id: new Types.ObjectId().toString(), nombre: 'Admin Test', rol: 'admin', atiende: false },
       })
     ).rejects.toMatchObject({ status: 409, codigo: 'SLOT_OCUPADO' } satisfies Partial<ApiError>);
   });

@@ -439,3 +439,180 @@
     display: none;
   }
 }
+
+/* Nuevo turno — alta manual (frontend.md §4.4). Mismo lenguaje visual que los
+   drawers de alta/edición de servicios/profesionales (usuario-drawer__* en
+   ProfesionalesPage.css) — clases propias acá porque cada página define las
+   suyas (sin CSS compartido entre rutas, mismo criterio del repo). */
+.nuevo-turno__grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 1rem;
+}
+
+.nuevo-turno__grid2 .nuevo-turno__campo {
+  margin-bottom: 0;
+}
+
+.nuevo-turno__campo {
+  margin-bottom: 1rem;
+}
+
+.nuevo-turno__campo select,
+.nuevo-turno__campo-manual input {
+  width: 100%;
+  border: var(--borde-hairline-fuerte);
+  border-radius: var(--radio-control);
+  padding: 0.55rem 0.7rem;
+  font-family: var(--fuente-ui);
+  font-size: 0.85rem;
+  background: var(--color-blanco);
+  color: var(--color-tinta);
+}
+
+.nuevo-turno__campo select:focus,
+.nuevo-turno__campo-manual input:focus {
+  outline: none;
+  border-color: var(--color-tinta);
+  box-shadow: 0 0 0 3px rgba(21, 21, 21, 0.08);
+}
+
+.nuevo-turno__ayuda {
+  font-size: 0.78rem;
+  color: var(--color-tinta-48);
+  margin: 0.3rem 0 0;
+}
+
+.nuevo-turno__ayuda--error {
+  color: var(--color-error-texto);
+}
+
+.nuevo-turno__error {
+  font-size: 0.75rem;
+  color: var(--color-error-texto);
+  margin: 0.4rem 0 0;
+}
+
+.nuevo-turno__fija {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-tinta);
+  background: var(--color-papel);
+  border: var(--borde-hairline);
+  border-radius: var(--radio-control);
+  padding: 0.55rem 0.7rem;
+  margin: 0;
+}
+
+.nuevo-turno__campo-manual {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: var(--color-tinta-48);
+}
+
+.nuevo-turno__manual .nuevo-turno__grid2 {
+  margin-bottom: 0.7rem;
+}
+
+.nuevo-turno__resumen {
+  font-size: 0.8rem;
+  color: var(--color-tinta-72);
+  margin: 0.6rem 0 0;
+}
+
+.callout {
+  border-radius: 11px;
+  padding: 0.75rem 0.875rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.callout--warn {
+  background: var(--color-estado-pendiente-fondo);
+  border: 0.5px solid #e4d3a0;
+  color: var(--color-estado-pendiente-texto);
+}
+
+/* Grilla de horarios del alta manual — mismo dato que la grilla de la reserva
+   pública (client-publico/.../Grilla.tsx), adaptada al ancho de escritorio
+   del drawer del panel. */
+.horario-grilla__estado {
+  font-size: 0.82rem;
+  color: var(--color-tinta-48);
+  text-align: center;
+  padding: 1.2rem 0;
+}
+
+.horario-grilla__error,
+.horario-grilla__vacio {
+  background: var(--color-papel);
+  border: 0.5px dashed var(--color-linea-fuerte);
+  border-radius: var(--radio-card);
+  padding: 1.1rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.horario-grilla__error p,
+.horario-grilla__vacio p {
+  font-size: 0.82rem;
+  color: var(--color-tinta-48);
+  margin: 0;
+}
+
+.horario-grilla__dia {
+  margin-bottom: 1.1rem;
+}
+
+.horario-grilla__etiqueta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-tinta-72);
+  text-transform: capitalize;
+  margin: 0 0 0.5rem;
+}
+
+.horario-grilla__slots {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.horario-grilla__slot {
+  background: var(--color-blanco);
+  border: var(--borde-hairline-fuerte);
+  border-radius: 8px;
+  padding: 0.5rem 0.2rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-tinta);
+  text-align: center;
+  cursor: pointer;
+}
+
+.horario-grilla__slot:hover {
+  border-color: var(--color-tinta);
+}
+
+.horario-grilla__slot.is-elegido {
+  background: var(--color-tinta);
+  border-color: var(--color-tinta);
+  color: var(--color-papel);
+}
+
+@media (max-width: 520px) {
+  .nuevo-turno__grid2 {
+    grid-template-columns: 1fr;
+  }
+
+  .horario-grilla__slots {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

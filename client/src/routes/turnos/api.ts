@@ -1,5 +1,13 @@
+import type { CrearTurnoInput } from '@shared/schemas/turno.schema';
 import { http } from '../../lib/http';
-import type { ProfesionalFiltro, TurnoPanel, TurnoPanelLista } from './types';
+import type {
+  CrearTurnoResultado,
+  ProfesionalFiltro,
+  ServicioOpcion,
+  SlotDisponible,
+  TurnoPanel,
+  TurnoPanelLista,
+} from './types';
 
 // Wrapper delgado sobre el cliente HTTP del panel (credentials + CSRF ya
 // resueltos ahí, frontend.md §4.0) — nada de lógica de negocio acá, sólo
@@ -58,4 +66,43 @@ export async function listarProfesionales(): Promise<ProfesionalFiltro[]> {
     .filter((u) => u.rol === 'profesional')
     .map((u) => ({ id: u.id, nombre: u.nombre, activo: u.activo }))
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+}
+
+// --- Alta manual — "Nuevo turno" (frontend.md §4.4) ---
+
+// GET público (§15.1), no admin-only: lo necesitan AMBOS roles del form (una
+// profesional no puede pegarle a /api/admin/servicios, §15.7 es admin-only).
+// Activos y ordenados, mismo shape que consume client-publico.
+export function listarServiciosActivos(signal?: AbortSignal): Promise<ServicioOpcion[]> {
+  return http.get<ServicioOpcion[]>('/api/servicios', { signal });
+}
+
+export interface ParamsDisponibilidad {
+  servicioId: string;
+  profesionalId: string;
+  desde: string; // ISO UTC
+  hasta: string; // ISO UTC
+}
+
+// GET público (§15.2) — mismo endpoint que la grilla de la reserva pública.
+export function listarDisponibilidad(
+  params: ParamsDisponibilidad,
+  signal?: AbortSignal
+): Promise<{ slots: SlotDisponible[] }> {
+  const query = new URLSearchParams({
+    servicioId: params.servicioId,
+    profesionalId: params.profesionalId,
+    desde: params.desde,
+    hasta: params.hasta,
+  }).toString();
+  return http.get<{ slots: SlotDisponible[] }>(`/api/disponibilidad?${query}`, { signal });
+}
+
+// MISMO POST /api/turnos público (§15.1) — el server deriva origen:'admin' de
+// la sesión (cookie, ya viaja por credentials:'include' del cliente HTTP del
+// panel), nada especial acá. `respetarGrilla:false` sólo lo honra si detectó
+// sesión admin/profesional; en request público (sin sesión) el campo se
+// ignora — no aplica a este wrapper, que siempre corre autenticado.
+export function crearTurnoManual(input: CrearTurnoInput): Promise<CrearTurnoResultado> {
+  return http.post<CrearTurnoResultado>('/api/turnos', input);
 }

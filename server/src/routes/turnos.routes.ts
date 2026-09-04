@@ -5,12 +5,14 @@ import { crearTurnoSchema, cancelarTurnoPanelSchema } from '@shared/schemas/turn
 import { estadoTurnoSchema } from '@shared/schemas/common.schema';
 import { crearTurno, aprobarTurno, rechazarTurno, marcarAusente, cancelarTurno } from '../services/turnos.service';
 import { listarTurnosPanel, obtenerTurnoPanel } from '../services/consultarTurnosPanel';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, detectarSesion } from '../middleware/auth';
 import { ApiError } from '../utils/apiError';
 
-// Superficie pública — siempre origen: 'web' (§15.1). La ruta de panel/admin
-// (con auth, todavía no construida) va a llamar a services/turnos.service.ts
-// pasando origen: 'admin'; no se agrega acá hasta que exista esa auth.
+// Superficie pública — sigue siendo pública (sin requireAuth): `detectarSesion`
+// sólo LEE la sesión si existe, sin exigirla (§15.1, "Determinación de
+// origen" — DECISIÓN CERRADA). turnos.service.ts deriva `origen` de
+// `req.usuarioSiHaySesion`: 'admin' si hay sesión válida de admin/profesional,
+// 'web' si no.
 
 // Factory en vez de Router singleton — mismo motivo que auth.routes.ts: cada
 // createApp() arma su propio rate limiter en memoria, con contador propio
@@ -38,7 +40,7 @@ export function crearTurnosRouter(): Router {
     },
   });
 
-  turnosRouter.post('/', crearTurnoRateLimit, async (req, res, next) => {
+  turnosRouter.post('/', crearTurnoRateLimit, detectarSesion, async (req, res, next) => {
     const parsed = crearTurnoSchema.safeParse(req.body);
     if (!parsed.success) {
       next(new ApiError(400, 'BODY_INVALIDO', 'Datos de turno inválidos', parsed.error.flatten()));
@@ -46,7 +48,7 @@ export function crearTurnosRouter(): Router {
     }
 
     try {
-      const resultado = await crearTurno({ ...parsed.data, origen: 'web' });
+      const resultado = await crearTurno({ ...parsed.data, usuarioSiHaySesion: req.usuarioSiHaySesion });
       res.status(201).json(resultado);
     } catch (err) {
       next(err);

@@ -28,10 +28,12 @@ export function verificarOwnershipTurno(
 }
 
 // Servicio de creación de turno — modelo-datos-turnos.md §15.1.
-// origen NO viaja en el body (crearTurnoSchema no lo tiene): lo decide quien
-// llama a esta función. Hoy sólo existe la ruta pública (routes/turnos.routes.ts),
-// que siempre pasa 'web'. La ruta de panel (con auth, más adelante) reusa esta
-// misma función pasando 'admin'.
+// origen NO viaja en el body (crearTurnoSchema no lo tiene) ni como parámetro
+// de quien llama: se deriva ACÁ, de `usuarioSiHaySesion` (poblado por
+// `detectarSesion`, middleware/auth.ts, si POST /api/turnos detectó una
+// sesión válida de admin/profesional). Sesión detectada ⇒ 'admin'; si no ⇒
+// 'web'. Centralizado en un solo lugar (no en la ruta) para que un futuro
+// segundo caller no pueda "olvidarse" de derivarlo bien.
 
 export interface CrearTurnoParams {
   servicioId: string;
@@ -40,12 +42,16 @@ export interface CrearTurnoParams {
   nombre: string;
   telefono: string; // crudo
   email?: string;
-  origen: OrigenTurno;
+  // Default true cuando se omite (crearTurnoSchema, shared) — sólo importa
+  // cuando la sesión detectada deriva origen:'admin'; 'web' siempre valida
+  // las cinco capas sin importar este valor (§15.1, "respetarGrilla").
+  respetarGrilla?: boolean;
+  usuarioSiHaySesion?: UsuarioAutenticado;
 }
 
 export interface CrearTurnoResultado {
   codigo: string;
-  estado: 'pendiente';
+  estado: 'pendiente' | 'confirmado';
   inicio: string;
   fin: string;
   servicio: {
@@ -100,6 +106,23 @@ interface ParamsInternos extends Omit<CrearTurnoParams, 'inicio'> {
 }
 
 async function intentarCrearTurno(p: ParamsInternos, session: ClientSession): Promise<CrearTurnoResultado> {
+  // Determinación de origen — DECISIÓN CERRADA (§15.1): sesión detectada de
+  // admin/profesional ⇒ 'admin'; sin sesión ⇒ 'web'. No hay ninguna otra
+  // entrada (el body no tiene `origen`, ver crearTurnoSchema).
+  const origen: OrigenTurno = p.usuarioSiHaySesion ? 'admin' : 'web';
+
+  // Ownership de profesionalId en sesión de profesional — DECISIÓN CERRADA
+  // (§15.1, Web 2026-09-04). Admin: sin restricción, cualquier profesionalId
+  // válido. Profesional (no admin): sólo puede cargar turnos para sí misma —
+  // reusa el mismo helper y el mismo código (403 SIN_PERMISO) que el
+  // ownership de turnos existentes (aprobar/rechazar/cancelar, §15.4), no
+  // se inventa uno nuevo. Sin sesión (web): sin restricción, como siempre.
+  // Comparación en memoria, antes de tocar la base — profesionalId ya está
+  // validado como ObjectId (crearTurno, antes de abrir la transacción).
+  if (p.usuarioSiHaySesion) {
+    verificarOwnershipTurno(p.usuarioSiHaySesion, { profesionalId: new Types.ObjectId(p.profesionalId) });
+  }
+
   const [config, profesional, servicio] = await Promise.all([
     Configuracion.findById('centro').session(session).lean(),
     Usuario.findById(p.profesionalId).session(session).lean(),
@@ -167,7 +190,15 @@ async function intentarCrearTurno(p: ParamsInternos, session: ClientSession): Pr
 
   let fueraDeHorario = false;
 
-  if (p.origen === 'web') {
+  // respetarGrilla — separado de origen (§15.1, DECISIÓN CERRADA): 'web'
+  // SIEMPRE las cinco capas (ignora respetarGrilla, la pública nunca lo
+  // manda). 'admin' con respetarGrilla true/ausente (el caso común) valida
+  // exactamente igual que web — sin agujero. Sólo 'admin' + respetarGrilla
+  // false EXPLÍCITO salta a "sólo importa el solape" (ya validado arriba) y
+  // marca fueraDeHorario.
+  const aplicarGrilla = origen === 'web' || p.respetarGrilla !== false;
+
+  if (aplicarGrilla) {
     if (!estaEnGrilla(p.inicio, config.timezone, config.pasoGrillaMin)) {
       throw new ApiError(400, 'GRILLA_INVALIDA', 'El horario pedido no está anclado a la grilla');
     }
@@ -188,8 +219,6 @@ async function intentarCrearTurno(p: ParamsInternos, session: ClientSession): Pr
       throw new ApiError(400, 'FUERA_DE_HORARIO', 'El horario pedido no está disponible');
     }
   } else {
-    // origen 'admin': sólo importa el solape (ya validado arriba); la política
-    // se pisa siempre, marcado.
     fueraDeHorario = true;
   }
 
@@ -212,6 +241,14 @@ async function intentarCrearTurno(p: ParamsInternos, session: ClientSession): Pr
   const tokenCrudo = crypto.randomBytes(32).toString('hex');
   const tokenHash = crypto.createHash('sha256').update(tokenCrudo).digest('hex');
 
+  // Estado inicial según origen — DECISIÓN CERRADA (§15.1): 'web' nace
+  // pendiente (como siempre); 'admin' nace confirmado directamente (Camila ya
+  // habló con la clienta al cargar el turno a mano) — nunca pasa por
+  // pendiente. `expiraEn` sólo tiene sentido mientras el turno es pendiente
+  // (ver comentario en turno.model.ts); un turno que nace confirmado no lo
+  // lleva.
+  const estadoInicial = origen === 'web' ? ('pendiente' as const) : ('confirmado' as const);
+
   // Campos fijos del documento — sólo `codigo` cambia entre el intento y el
   // reintento de más abajo.
   const camposTurno = {
@@ -229,16 +266,18 @@ async function intentarCrearTurno(p: ParamsInternos, session: ClientSession): Pr
     inicio: p.inicio,
     fin,
     finBloqueo,
-    estado: 'pendiente' as const,
-    expiraEn: new Date(Date.now() + config.vencimientoPendienteHoras * 3600_000),
+    estado: estadoInicial,
+    expiraEn:
+      estadoInicial === 'pendiente' ? new Date(Date.now() + config.vencimientoPendienteHoras * 3600_000) : undefined,
     historial: [
       {
-        estado: 'pendiente' as const,
+        estado: estadoInicial,
         fecha: new Date(),
-        porTipo: p.origen === 'admin' ? ('usuario' as const) : ('cliente' as const),
+        porTipo: origen === 'admin' ? ('usuario' as const) : ('cliente' as const),
+        porId: p.usuarioSiHaySesion ? new Types.ObjectId(p.usuarioSiHaySesion.id) : undefined,
       },
     ],
-    origen: p.origen,
+    origen,
     fueraDeHorario,
     tokenHash,
   };
@@ -259,26 +298,35 @@ async function intentarCrearTurno(p: ParamsInternos, session: ClientSession): Pr
     [turno] = await Turno.create([{ ...camposTurno, codigo }], { session });
   }
 
-  await Notificacion.create(
-    [
-      {
-        turnoId: turno._id,
-        tipo: 'solicitud',
-        canal: 'whatsapp',
-        destino: p.telefonoE164,
-        programadaPara: new Date(),
-      },
-    ],
-    { session }
-  );
-  // NO se envía nada acá — el worker (§7, todavía no construido) toma esta
-  // notificación 'pendiente' aparte. `tokenCrudo` queda sin uso hasta que el
-  // worker arme el link del mensaje; ver TODO de CrearTurnoResultado arriba.
+  // Notificación según origen — DECISIÓN CERRADA (§15.1): 'web' encola
+  // 'solicitud' (nadie confirmó nada todavía). 'admin' encola confirmacion +
+  // recordatorio_24h si corresponde — reusa `encolarConfirmacion`, la MISMA
+  // función que usa aprobarTurno (§15.4), no reimplementa el umbral de 24hs.
+  // 'admin' NO encola 'solicitud': no aplica, nadie espera confirmación.
+  if (origen === 'web') {
+    await Notificacion.create(
+      [
+        {
+          turnoId: turno._id,
+          tipo: 'solicitud',
+          canal: 'whatsapp',
+          destino: p.telefonoE164,
+          programadaPara: new Date(),
+        },
+      ],
+      { session }
+    );
+  } else {
+    await encolarConfirmacion(turno as unknown as TurnoLean, session);
+  }
+  // NO se envía nada acá — el worker (§7) toma estas notificaciones
+  // 'pendiente' aparte. `tokenCrudo` queda sin uso hasta que el worker arme
+  // el link del mensaje; ver TODO de CrearTurnoResultado arriba.
   void tokenCrudo;
 
   return {
     codigo: turno.codigo,
-    estado: 'pendiente',
+    estado: turno.estado as 'pendiente' | 'confirmado',
     inicio: turno.inicio.toISOString(),
     fin: turno.fin.toISOString(),
     servicio: { nombre: servicio.nombre, duracionMin: servicio.duracionMin, precio: servicio.precio },

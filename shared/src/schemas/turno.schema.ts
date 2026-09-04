@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
-// Lo que NO está acá es lo importante: precio, duracionMin, fin, finBloqueo.
-// Nada calculable viaja desde el cliente — el server los deriva leyendo la base
-// (ver modelo-datos-turnos.md §3 y §10).
+// Lo que NO está acá es lo importante: precio, duracionMin, fin, finBloqueo,
+// y también `origen` — se deriva de la sesión en el server, nunca del body
+// (§15.1, "Determinación de origen" — DECISIÓN CERRADA). Un `origen` en el
+// JSON simplemente se ignora porque el campo no existe acá.
 export const crearTurnoSchema = z.object({
   servicioId: z.string(),
   profesionalId: z.string(),
@@ -10,6 +11,15 @@ export const crearTurnoSchema = z.object({
   nombre: z.string().min(2).max(80),
   telefono: z.string().min(6), // crudo, se normaliza en el server
   email: z.string().email().optional(),
+  // Separado de `origen` a propósito (§15.1, "respetarGrilla" — DECISIÓN
+  // CERRADA): `origen` dice QUIÉN crea el turno, esto dice si se valida el
+  // horario. Opcional, default true cuando se omite (server, no acá con
+  // `.default()`: así el tipo inferido `CrearTurnoInput` deja el campo
+  // opcional para quien arma el body, en vez de forzar un `true` explícito
+  // en cada request público que nunca lo necesita). Sólo `origen:'admin'`
+  // puede pasar `false` para saltarse la grilla; `origen:'web'` (la
+  // pública) nunca manda este campo, así que el default no le cambia nada.
+  respetarGrilla: z.boolean().optional(),
 });
 export type CrearTurnoInput = z.infer<typeof crearTurnoSchema>;
 

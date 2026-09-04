@@ -323,6 +323,49 @@ FASE 2.
 Contratos aplicados: precio centavos ÷100 → ARS sólo para mostrar; `telefonoE164`
 en crudo para `tel:`; fechas desde ISO UTC agrupadas por día local (Luxon).
 
+ALTA MANUAL — "Nuevo turno" (agregado 2026-09-04, cierra el hueco de §4.1 que
+asumía esto desde el arranque). Consume el MISMO `POST /api/turnos` público
+(§15.1 backend) — no hay endpoint nuevo. El server determina `origen:'admin'`
+por la sesión (cookie), no por ningún campo del body; con `credentials:'include'`
+ya puesto por el cliente HTTP del panel (§4.0), no hace falta nada especial ahí.
+
+Botón "Nuevo turno" visible para AMBOS roles (admin y profesional) — decisión de
+producto: una profesional puede cargar turnos para su propia agenda si una
+clienta la contacta directamente, misma filosofía que ya tiene para
+aprobar/rechazar/cancelar sus propios turnos.
+
+Form (mismos campos que la reserva pública, §4.11): nombre, teléfono (normalizar
+a E164 con libphonenumber-js antes de enviar, §2), servicio, profesional,
+horario. El selector de horario reusa el MISMO flujo de disponibilidad de la web
+pública (grilla por día, agrupada local) — NO es un date-picker libre por
+defecto.
+
+Selector de profesional, role-aware:
+- admin: selector con todas las profesionales activas (`atiende:true`).
+- profesional: SIN selector — precargar directo su propio `profesionalId` (de
+  la sesión), no editable ni mostrado como opción. CERRADO 2026-09-04 (backend
+  §15.1/§17): el server valida ownership real — si el body trae un
+  `profesionalId` distinto al de la sesión de una profesional, responde `403
+  SIN_PERMISO` (mismo código que ya se mapea en otras pantallas del panel para
+  "turno ajeno", §4.4 arriba). Ocultar el selector es UX (evita el error en uso
+  normal), no la garantía — la garantía real ya vive en el server.
+
+Toggle "Cargar fuera del horario habitual" — DESACTIVADO por default:
+- Sin tocar (ausente o `respetarGrilla` no enviado, que por default en el
+  server equivale a `true`): valida las 5 capas igual que la reserva pública.
+  Si el horario no es válido, 400 — mismo manejo de error que ya existe para
+  la pública, no hay nada nuevo que programar ahí.
+- Activado (`respetarGrilla:false` explícito en el body): sólo valida que no
+  solape con otro turno. Permite cualquier horario. La respuesta marca
+  `fueraDeHorario:true` — mostrar ese estado en el listado (mismo badge/aviso
+  que ya existe para turnos fuera de grilla, §4.4 arriba).
+
+Resultado: el turno nace CONFIRMADO directo (no pendiente, no pasa por la cola
+de aprobar). Un solo submit, un solo request — el front NO encadena create+
+aprobar. La clienta recibe directo el WhatsApp de confirmación (y
+recordatorio_24h si corresponde), nunca el de "solicitud". Toast de éxito +
+volver al listado (el turno nuevo aparece ya confirmado).
+
 PENDIENTE de implementación:
 - `409 ESTADO_INVALIDO` en toda transición: releer y avisar "el turno ya cambió de
   estado", no asumir éxito (§15.4/15.5).
@@ -676,22 +719,6 @@ GET /disponibilidad 60/min; GET /servicios* 60/min (§14 backend).
 
 
 ## §5 Registro de implementación
-
-
-### 2026-09-04 — Rewrite SPA en Hostinger vía .htaccess (fix 404 en deep-link/refresh)
-
-**Síntoma:** entrar directo a panel.camilagonzalezbelleza.com/login (o refrescar
-en cualquier ruta ≠ /) devolvía el 404 de Hostinger — Apache busca un archivo
-físico /login en dist/, no existe, React Router nunca arranca.
-
-**Fix:** client/public/.htaccess con rewrite SPA (Apache mod_rewrite): sirve
-archivos/carpetas reales tal cual, y cualquier otra ruta la reescribe a
-index.html para que React Router la resuelva client-side. Va en public/ para que
-Vite lo copie a dist/ en cada build (queda versionado, no se pierde en redeploy).
-
-**Aplica sólo a client/ (panel):** es la SPA con routing (React Router,
-/login, /turnos, etc.). client-publico/ es efectivamente single-route, pero si
-en el futuro suma rutas, necesita el mismo .htaccess.
 
 Bitácora de código, append-only — no especificación. La mantiene Claude Code.
 Cada entrada: qué se implementó al cerrar una tarea, con qué archivos y con qué
@@ -3107,3 +3134,153 @@ definitivo, título de sección limpiado de "salvo fuente display"). Causa raíz
 edité una copia del `.md` sin pedir sincronización previa del repo, que ya tenía
 bitácora nueva escrita por Claude Code. Iremos con sincronizar el repo ANTES de
 cualquier edición en Web de acá en más.
+
+---
+
+### 2026-09-04 (Claude Code) — Alta manual de turnos, "Nuevo turno" (panel, §4.4)
+
+Cierra el hueco de §4.1 (el panel debía poder crear turnos desde el arranque,
+nunca se había construido). Consume el MISMO `POST /api/turnos` público
+(§15.1 backend, ya cerrado del lado server con `origen:'admin'`/
+`respetarGrilla` — cambios de `server/` presentes en el working tree al
+empezar esta tarea, no tocados acá) — sin endpoint nuevo. Sin mockup: se
+clonó el patrón de datos/flujo de la reserva pública (§4.11) y el lenguaje
+visual de los drawers de alta/edición ya construidos (`ServicioDrawer`/
+`UsuarioDrawer`, §4.5/§4.6), adaptado a desktop.
+
+**Archivos nuevos, `client/src/routes/turnos/`:**
+- `components/NuevoTurnoDrawer.tsx` — el form completo: nombre, teléfono,
+  servicio, profesional (role-aware), horario, toggle "fuera de horario".
+- `components/GrillaHorario.tsx` — grilla de horarios agrupada por día local,
+  mismo dato que consume `client-publico` (`GET /api/disponibilidad`), sin
+  compartir componente 1:1 entre las dos apps (dos proyectos Vite separados).
+
+**Archivos tocados:**
+- `types.ts` — `ServicioOpcion`, `SlotDisponible`, `CrearTurnoResultado`,
+  `ResultadoCrearTurno` (espejo de los reads/write públicos que ya usa
+  `client-publico/src/routes/reserva/types.ts`, replicado a mano por el
+  mismo motivo que el resto del archivo: sin schema Zod de respuesta).
+- `api.ts` — `listarServiciosActivos` (`GET /api/servicios`, público — lo
+  necesitan ambos roles, `/api/admin/servicios` es admin-only y una
+  profesional no puede pegarle), `listarDisponibilidad` (`GET
+  /api/disponibilidad`), `crearTurnoManual` (`POST /api/turnos`, wrapper
+  fino sobre el mismo endpoint público).
+- `TurnosPage.tsx` — botón "Nuevo turno" en el head (visible para ambos
+  roles), estado `nuevoTurnoAbierto`/`creandoTurno`, `crearTurnoManual()`:
+  hace el `POST`, toast + cierra + `cargarTurnos()` en éxito; en `409
+  SLOT_OCUPADO` toastea y devuelve `{ok:false, slotsOcupado}` para que el
+  drawer refresque su propia grilla (mismo criterio que
+  `client-publico/ReservaPage.manejarSlotOcupado`, §4.11); el resto de los
+  códigos (403 `SIN_PERMISO`, 400 `FUERA_DE_HORARIO`/`SERVICIO_NO_PRESTADO`,
+  404, etc.) cae en el toast genérico — igual que `ServiciosPage` con sus
+  errores no especiales, no hay copy dedicado por código.
+- `TurnosPage.css` — clases `.nuevo-turno__*` (mismo lenguaje visual que
+  `.usuario-drawer__*` en `ProfesionalesPage.css`, duplicado a propósito:
+  cada página define las suyas, sin CSS compartido entre rutas, criterio ya
+  establecido en el repo) y `.horario-grilla__*`.
+
+**Decisiones de implementación (sin mockup, dentro de lo que §4.4 ya cerró):**
+- **Teléfono sin prefijo fijo "+54 9":** la reserva pública (§4.11) fija el
+  prefijo y sólo pide el resto; acá se usó el patrón que YA tiene el panel
+  (`lib/format/telefono.ts` + `UsuarioDrawer`, Input simple con
+  `normalizarTelefonoAR`) en vez de clonar el de la pública — mismo campo,
+  ya resuelto, sin inventar una segunda convención de teléfono dentro del
+  mismo panel. `lib/format/telefono.ts` ya preveía este uso en su propio
+  comentario ("la primera vez que el front necesita normalizar un teléfono
+  para ENVIAR").
+- **Selector de profesional (admin) sin filtrar por servicio elegido:**
+  `listarUsuarios` (reusado tal cual pide §4.4) no sabe qué servicios presta
+  cada quien en el query — el dropdown muestra TODAS las activas que
+  atienden, sin cruzar contra el servicio. Si el admin arma una combinación
+  inválida, el server la corta con `400 SERVICIO_NO_PRESTADO` (igual que
+  cualquier otro código no especial, toast genérico). No se usó
+  `GET /api/servicios/:id/profesionales` (que sí filtra por servicio,
+  público, es lo que usa la reserva) porque §4.4 cierra explícitamente
+  "reusar `listarUsuarios` ya existente" — se siguió la decisión cerrada tal
+  cual, no se mejoró en silencio.
+- **Ventana de la grilla — 14 días con "Ver más fechas" (no la semana fija de
+  la pública):** un operador cargando un turno por teléfono puede necesitar
+  una fecha más lejana que una clienta reservando para sí misma en el
+  momento. Mismo endpoint/agrupado-por-día, ventana inicial más generosa +
+  botón que la extiende de a 14 días (`GET /api/disponibilidad` re-pedido
+  con `hasta` más lejos) en vez de la ventana fija de 7 días de
+  `client-publico`.
+- **Horario "fuera de grilla" (toggle activado) → date+time libres, no la
+  grilla:** con `respetarGrilla:false` el server sólo valida solape (nunca
+  antelación/ventana/horario, `turnos.service.ts` líneas ~191-223) — la
+  grilla de disponibilidad (que sólo devuelve horarios YA válidos dentro de
+  la grilla habitual) no tiene ningún horario "fuera de horario" para
+  ofrecer. El toggle cambia el bloque de horario entero a dos `<input
+  type="date">`/`<input type="time">` nativos, combinados con
+  `fechaHoraLocalUtc` (ya existía en `lib/format/fecha.ts`, mismo criterio
+  que excepciones §4.8) — sin mínimo de fecha: el server no lo exige en este
+  modo y un walk-in cargado tarde es un caso real.
+- **`NuevoTurnoDrawer` sin banner de error genérico:** mismo criterio que
+  `ServicioDrawer`/`UsuarioDrawer` — el toast del padre ya cubre los errores
+  no especiales, el drawer sólo reacciona a `slotsOcupado` (refresca su
+  grilla interna) y a los errores de campo que arma él mismo (nombre,
+  teléfono, servicio, profesional, horario — validación local, sin golpear
+  el server).
+
+**Tests / typecheck:** `npm run typecheck` (shared + server + client +
+client-publico) limpio. `npm run build --workspace=client` limpio (238
+módulos). Server: **148 tests** (sin cambios — no se tocó `server/` en esta
+tarea; el trabajo backend de `origen`/`respetarGrilla` ya estaba en el
+working tree al empezar, verificado en verde antes de arrancar). Shared: 10
+tests, sin cambios. `client`/`client-publico` siguen sin tests unitarios
+(igual que el resto del front) — la barra es typecheck + build + guión
+manual. §14 (backend) sin cambios, no aplica acá.
+
+**Sin contradicciones encontradas** contra §1–§16 durante esta tarea — el
+backend de `origen:'admin'`/`respetarGrilla` ya estaba implementado y
+testeado antes de empezar, el front sólo lo consume tal como está
+especificado.
+
+**Guión de prueba manual:**
+
+Levantar: `npm run dev` desde la raíz (panel `:5173` + server `:4000`).
+Necesita al menos una profesional `atiende:true` con horario semanal
+cargado y un servicio activo que ella preste (Configuración → Profesionales
+→ Servicios, ya construidos).
+
+1. **Admin, alta con grilla respetada:** loguearse como admin → Turnos →
+   botón "Nuevo turno" (arriba a la derecha) → se abre el drawer. Completar
+   nombre + teléfono (probar uno sin código de área primero → error inline
+   "Teléfono inválido…"; corregir con uno completo, ej. `341 555-2847` → el
+   hint pasa a "Le llega la confirmación por WhatsApp a este número.").
+   Elegir un servicio (el desplegable muestra nombre · duración · precio).
+   Elegir una profesional (sólo aparecen las que atienden). La grilla de
+   horarios carga agrupada por día ("Hoy · …", "Mañana · …") — elegir un
+   slot (queda resaltado). Click "Crear turno" → toast "Turno creado y
+   confirmado.", el drawer se cierra y el turno nuevo aparece en la lista
+   con badge **Confirmado** (no pasa por pendientes).
+2. **Admin, "fuera de horario":** repetir el alta, esta vez activar el
+   switch "Cargar fuera del horario habitual" — la grilla desaparece y
+   aparecen "Fecha"/"Hora" libres + el aviso "Este turno queda marcado
+   'fuera de horario'…". Elegir una fecha/hora fuera del horario habitual de
+   la profesional (ej. un domingo, o antes de que abra) → "Crear turno" →
+   mismo toast de éxito. En el listado, el turno nuevo muestra el flag
+   "fuera de horario" en la fila y el aviso correspondiente en el drawer de
+   detalle (mismo badge que ya existía, no uno nuevo).
+3. **Profesional, sin selector:** loguearse como una profesional → Turnos →
+   "Nuevo turno" también visible acá. En "Profesional" NO hay desplegable:
+   se ve el texto fijo "Vos, {su nombre}". Completar el resto y confirmar →
+   el turno se crea para ELLA (verificar en el listado, o si es admin en
+   otra sesión, que la columna profesional coincide).
+4. **Validaciones inline:** intentar "Crear turno" con el form vacío → todos
+   los campos marcan error a la vez (nombre, teléfono, servicio, profesional
+   si admin, horario) sin haber tocado ninguno individualmente (blur toca
+   cada campo por separado; el botón toca todos de una).
+5. **Forzar 409 SLOT_OCUPADO:** abrir "Nuevo turno", elegir servicio +
+   profesional + un slot, pero ANTES de confirmar, en otra pestaña (misma
+   sesión u otra) reservar ESE mismo horario (desde `client-publico` o desde
+   otro alta manual). Volver a la primera pestaña y confirmar → toast "Ese
+   horario se acaba de ocupar. Elegí otro.", el drawer NO se cierra, la
+   grilla se refresca sola (ese slot desaparece, aparecen los que quedan
+   libres ese día) y hay que elegir uno nuevo.
+6. **"Ver más fechas":** con la grilla cargada, click "Ver más fechas" al
+   pie — trae más días sin perder los que ya estaban, mismo patrón agrupado.
+7. **Errores de catálogo:** con el server caído a mitad de sesión (parar
+   `npm run dev --workspace=server` con el drawer ya abierto y reintentar el
+   fetch de servicios/profesionales/disponibilidad) → cada sección cae en su
+   propio mensaje de error, sin romper el resto del form.

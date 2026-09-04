@@ -914,7 +914,7 @@ todavía en el primer insert de un test, dando falsos negativos en aserciones
 de unicidad. Fix en `dbTestSetup.ts`: `await Promise.all(...models.map(m =>
 m.init()))` tras conectar. Detalle en §11.
 
-**Estado: CRUD del panel COMPLETO. 138 tests server + 10 shared verdes,
+**Estado: CRUD del panel COMPLETO. 148 tests server + 10 shared verdes,
 typecheck limpio en el monorepo.**
 
 **Cerrado desde entonces:**
@@ -1007,18 +1007,81 @@ de esa profesional para el día del `inicio` pedido. Reusa la relectura que ya
 hizo la transacción — costo casi nulo — y ahorra al front un segundo
 round-trip. Forma: `{ codigo: 'SLOT_OCUPADO', mensaje, detalle: { slots: Slot[] } }`.
 
-**Validación de grilla según origen.** La grilla es política de presentación,
-no conflicto real (§6):
-- `origen: 'web'` ⇒ el `inicio` DEBE ser múltiplo de `pasoGrillaMin` anclado a
-  medianoche local. Un fuera-de-grilla desde la web sólo puede venir de un
-  request manipulado (la web nunca ofrece 09:07) ⇒ `400`. Valida las cinco
-  capas de disponibilidad.
-- `origen: 'admin'` ⇒ acepta cualquier `inicio` que no solape. Marca
-  `fueraDeHorario: true`. Valida SÓLO el solape (conflicto real); las
-  políticas (horarios, antelación, grilla) las puede pisar. Ese rango deja de
+**Determinación de `origen` — DECISIÓN CERRADA.** No viaja en el body (§3,
+nada calculable desde el cliente): el endpoint sigue siendo público
+(`POST /api/turnos` sin `requireAuth` obligatorio), pero corre un middleware
+que LEE la sesión si existe, sin exigirla. Sesión válida de `admin`/
+`profesional` ⇒ `origen:'admin'`; sin sesión ⇒ `origen:'web'`. No hay ningún
+valor en el body con efecto sobre esto — un intento de spoofear `origen` en
+el JSON simplemente se ignora porque el campo no existe en
+`crearTurnoSchema`. Un solo endpoint, no `POST /api/admin/turnos` aparte:
+la superposición con el flujo público (precondiciones de catálogo, chequeo
+de solape, snapshot, decisión de grilla) es casi total; separar endpoints
+duplicaría la transacción de 8 operaciones por una diferencia real que es
+chica (ver abajo), con el riesgo de divergencia que ya mordió una vez
+(`encolarRechazo`/`encolarCancelacion`, §7).
+
+**`respetarGrilla` — separado de `origen`, DECISIÓN CERRADA.** `origen`
+determina QUIÉN creó el turno (mensajería/auditoría); `respetarGrilla?:
+boolean` (body, default `true`) determina si se valida el horario. Están
+desacoplados a propósito: `origen:'admin'` con `respetarGrilla:true`
+(el caso común — Camila carga un turno en un horario normal) valida las
+CINCO capas exactamente como `origen:'web'`, sin agujero. Sólo
+`respetarGrilla:false` explícito salta la grilla y marca
+`fueraDeHorario:true` — requiere que el operador active a propósito el
+toggle "cargar fuera de horario habitual" en el panel, no es lo que pasa
+por default al estar logueado.
+
+- `origen:'web'` ⇒ SIEMPRE las cinco capas (`respetarGrilla` no aplica,
+  la pública nunca lo manda).
+- `origen:'admin'`, `respetarGrilla:true` (default) ⇒ las cinco capas,
+  igual que web.
+- `origen:'admin'`, `respetarGrilla:false` ⇒ sólo valida el solape
+  (conflicto real). Marca `fueraDeHorario:true`. Ese rango deja de
   ofrecerse a la próxima clienta.
 
-En ambos casos el solape con otro turno NO se puede pisar. Nadie, ni el admin.
+En los tres casos el solape con otro turno NO se puede pisar. Nadie, ni
+el admin.
+
+**Estado inicial y notificación según `origen` — DECISIÓN CERRADA.**
+- `origen:'web'` ⇒ nace `pendiente`, encola `solicitud`. Como hoy.
+- `origen:'admin'` ⇒ nace `confirmado` directamente (Camila ya habló con
+  la clienta al cargar el turno a mano) — NO pasa por `pendiente`. Encola
+  `confirmacion` + `recordatorio_24h` si corresponde (mismo umbral de
+  24hs que ya decide `aprobarTurno`, §15.4 — reusar esa función de
+  decisión, no reimplementarla). NO encola `solicitud` — no aplica, nadie
+  espera confirmación.
+
+Todo esto en la MISMA transacción de `intentarCrearTurno` (§15.1 arriba),
+no dos requests encadenados: abrir una ventana entre "crear pendiente" y
+"aprobar" reintroduce el riesgo de carrera que la transacción ya evita
+para el resto del flujo.
+
+
+**Ownership de `profesionalId` en sesión de profesional — DECISIÓN CERRADA
+(Web, 2026-09-04).** Ambos roles pueden cargar turnos manuales (no es
+admin-only), pero con alcance distinto:
+- Sesión de `admin` ⇒ sin restricción, cualquier `profesionalId` válido
+  (como ya valen las precondiciones de catálogo).
+- Sesión de `profesional` (no admin) ⇒ el `profesionalId` del body DEBE
+  coincidir con el `_id` del usuario en sesión. Si no coincide ⇒
+  `403 SIN_PERMISO` — mismo código que ya usa el sistema para ownership de
+  turnos (§15.4/§15.6, aprobar/rechazar/cancelar/detalle ajeno). No se
+  inventa un código nuevo para esta variante del mismo problema.
+- Sin sesión (`origen:'web'`) ⇒ sin restricción, como siempre.
+
+Chequeo SERVER-SIDE, dentro de `intentarCrearTurno`, inmediatamente después
+de derivar `origen` desde `usuarioSiHaySesion` — mismo principio que ya
+aplica para `origen` en sí ("un solo lugar, no la ruta"). Se rechaza ANTES
+de abrir la transacción — es una comparación de ids en memoria, no requiere
+tocar la base. El front puede (y debería) ocultar el selector de
+profesional cuando la sesión es de una profesional, pero eso es UX, no la
+defensa real: el chequeo server-side es lo que cierra el hueco de verdad,
+independiente de lo que el front muestre u oculte.
+
+**`crearTurnoSchema` (§10) suma `respetarGrilla?: boolean`** (default
+`true` si se omite). Sigue sin aceptar `origen` — se deriva del server,
+nunca del body.
 
 **Snapshots al crear** (§3): el turno congela `servicio` (precio, duración,
 buffer) y `clienteSnapshot` (nombre, teléfono E164, email) leídos de la base
@@ -2670,3 +2733,178 @@ de nada. El `.env` sólo existió en los commits colgados de `server/.git`;
 **No se corrió** `typecheck`/tests: la tarea no tocó código, sólo plumbing de
 git y `.gitignore`. **No se rotó** el Twilio Auth Token (se evalúa aparte).
 **No se usó** el link "allow the secret" de GitHub.
+
+### 2026-09-04 — Determinación de origen + alta confirmada desde panel (§15.1)
+
+**Qué se implementó:** cierra el hueco de `origen:'admin'` — hasta ahora nada
+lo determinaba nunca (el único caller de `crearTurno` era la ruta pública,
+siempre `'web'`).
+
+1. **`detectarSesion`** (`server/src/middleware/auth.ts`): middleware nuevo,
+   hermano de `requireAuth` pero sin exigir sesión. Si `req.session.usuarioId`
+   resuelve a un usuario activo, popula `req.usuarioSiHaySesion` (campo
+   propio, no `req.usuario` — para no confundirlo con el que sí exige
+   `requireAuth`). Aplica el mismo CSRF liviano que `requireAuth`
+   (`HEADER_CSRF`/`VALOR_CSRF`, §16) pero condicional: sólo si detectó una
+   sesión válida en un método mutante. Decisión propia no pedida
+   explícitamente en el prompt: sin esto, un POST cross-site con la cookie de
+   un admin logueado podría crear turnos confirmados en su nombre — mismo
+   vector que `requireAuth` ya cierra en toda ruta autenticada, y este
+   endpoint pasa a tener un efecto privilegiado cuando hay sesión.
+2. **`turnos.service.ts`**: `CrearTurnoParams` cambia `origen: OrigenTurno`
+   (que el caller decidía) por `usuarioSiHaySesion?: UsuarioAutenticado` +
+   `respetarGrilla?: boolean`. `origen` se deriva DENTRO de
+   `intentarCrearTurno` (`p.usuarioSiHaySesion ? 'admin' : 'web'`) — un solo
+   lugar, no la ruta, para que un futuro segundo caller no pueda derivarlo
+   mal. La validación de horario pasa de `if (origen==='web')` a
+   `origen==='web' || p.respetarGrilla !== false` (`!==false` en vez de
+   `===true` porque callers directos del service, como los tests, pueden
+   pasar `undefined` y el default debe seguir siendo "valida"). Estado
+   inicial: `'admin'` nace `confirmado` (no pasa por `pendiente`); `expiraEn`
+   sólo se setea si nace pendiente (antes se seteaba siempre, quedaba huérfano
+   en un turno confirmado). Notificación: `'web'` sigue encolando `solicitud`;
+   `'admin'` llama a `encolarConfirmacion` — la MISMA función privada que ya
+   usa `aprobarTurno` (no se reimplementó el umbral de 24hs de
+   `RECORDATORIO_LEAD_HORAS`). `historial` ahora también guarda `porId` del
+   usuario de sesión cuando existe.
+3. **`shared/src/schemas/turno.schema.ts`**: suma `respetarGrilla:
+   z.boolean().optional()`. Ojo: se probó primero `.default(true)`, pero eso
+   hace que `z.infer` (el tipo `CrearTurnoInput` que consume
+   `client-publico`) exija el campo como `boolean` no-opcional en el objeto
+   de entrada — rompía el build de `client-publico` (que arma el body sin
+   `respetarGrilla`, correctamente, porque nunca lo necesita). Se optó por
+   `.optional()` sin default de Zod; el default "true si se omite" vive en la
+   lógica del server (`!== false`), no en el schema. `origen` sigue sin
+   existir en el schema — confirmado, no se agregó.
+4. **`turnos.routes.ts`**: `POST /` suma `detectarSesion` después del rate
+   limit; pasa `usuarioSiHaySesion: req.usuarioSiHaySesion` a `crearTurno`, ya
+   no `origen: 'web'` hardcodeado.
+5. **`express.d.ts`**: suma `usuarioSiHaySesion?: UsuarioAutenticado` al
+   `Request` de Express.
+
+**Archivos tocados:** `shared/src/schemas/turno.schema.ts`,
+`server/src/middleware/auth.ts`, `server/src/types/express.d.ts`,
+`server/src/services/turnos.service.ts`, `server/src/routes/turnos.routes.ts`.
+
+**Tests:**
+- `server/src/routes/turnos.creacion.origen.test.ts` (nuevo, 7 tests) — recorrido
+  HTTP completo con sesión real (`request.agent` + login + `conCsrf`,
+  patrón de `turnos.panel.test.ts`): sin sesión ⇒ web/pendiente/solicitud;
+  sesión admin sin `respetarGrilla` ⇒ admin/confirmado/confirmacion+
+  recordatorio_24h/sin solicitud; sesión admin + `respetarGrilla:false` fuera
+  de horario del centro ⇒ 201 fueraDeHorario:true, sólo solape; sesión admin +
+  `respetarGrilla` ausente o `true` explícito, fuera de grilla ⇒ 400 (el caso
+  que antes no existía — confirma que el default no agujerea la grilla, dos
+  variantes con `it.each`); sesión de profesional (no admin) ⇒ también
+  origen `'admin'`, documentado explícitamente porque el schema no distingue
+  rol; spoofing de `origen` en el body sin sesión ⇒ se ignora, sigue `'web'`.
+- `server/src/routes/turnos.creacion.test.ts` — dos tests existentes que
+  llamaban a `crearTurno(...)` directo con `origen: 'admin'` ya no compilan
+  con la nueva firma: se migraron a pasar `usuarioSiHaySesion` (objeto
+  `UsuarioAutenticado` armado a mano). El test de "admin fuera de grilla ⇒
+  201 pendiente" cambió de comportamiento a propósito (spec nueva): ahora
+  necesita `respetarGrilla:false` explícito para no caer en 400, y el turno
+  resultante queda `confirmado`, no `pendiente`.
+- `server/src/worker.test.ts` — `crearTurnoParaTest()` usaba `origen:'admin'`
+  puntualmente para no depender de la grilla (comentario original: "para no
+  depender de la grilla de disponibilidad"), y confiaba en la notificación
+  `'solicitud'` que dejaba pendiente para que el worker la tomase. Con este
+  cambio, `origen:'admin'` ya NO deja `'solicitud'` (deja `'confirmacion'`
+  directo) — rompía ~7 aserciones del worker que buscaban
+  `tipo:'solicitud'`. Se cambió el helper a `origen:'web'` con un `inicio`
+  anclado a la grilla (Luxon, mismo patrón que los demás archivos de test)
+  en vez de `Date.now()+72h` crudo. No se tocó nada del worker en sí, sólo
+  el helper de test que arma el turno de prueba.
+
+**Problema encontrado y resuelto:** `respetarGrilla: z.boolean().default(true)`
+en el schema compartido rompía el typecheck de `client-publico`
+(`HojaDatos.tsx`) porque `z.infer` usa el tipo de *salida*, no el de entrada
+— con `.default()` el campo deja de ser opcional en `CrearTurnoInput`. Se
+resolvió con `.optional()` puro + default en lógica de server, sin tocar
+`client-publico`.
+
+**Descartado:** hacer la derivación de `origen` en la ruta
+(`turnos.routes.ts`) en vez de en el service — el prompt pedía explícitamente
+que viva en `intentarCrearTurno`, y mantenerlo ahí es más defendible (un
+único punto de derivación aunque aparezca un segundo caller a futuro).
+
+**Verificación:** `npm run typecheck` limpio en los 4 workspaces. Suite
+completa: `shared` 10/10 verdes. `server` 143/145 verdes — los 2 que fallan
+(`auth.routes.test.ts`, rate limit de login, timeout de 5000ms) son
+preexistentes y no relacionados: se confirmó corriendo ese archivo aislado
+sobre el código sin tocar (`git stash`) y pasa 14/14 en 1.8s/1.4s: el timeout
+sólo aparece corriendo la suite completa por contención de CPU en esta
+máquina, no por este cambio. No se subió `testTimeout` ni se tocó ese
+archivo — queda como deuda de infra de test, no de este alcance.
+
+**No se tocó** `aprobarTurno`/`rechazarTurno`/`cancelarTurno` (§15.4/15.5)
+más que para reusar `encolarConfirmacion` sin duplicarla, ni disponibilidad
+ni el worker en sí (sólo su test helper, arriba).
+
+### 2026-09-04 — Ownership de `profesionalId` en sesión de profesional (§15.1)
+
+Continuación directa de la entrada anterior ("Determinación de origen + alta
+confirmada desde panel", mismo día, mismo archivo/función) — cierra el bloque
+"Ownership de `profesionalId` en sesión de profesional" agregado a §15.1 en
+Web después de esa entrega.
+
+**Qué se implementó:** en `intentarCrearTurno` (`turnos.service.ts`),
+inmediatamente después de derivar `origen` desde `p.usuarioSiHaySesion` —
+mismo punto que ya decide `'admin'` vs `'web'` — se agregó el chequeo de
+ownership: si hay sesión y su rol NO es admin (o sea, es profesional), el
+`profesionalId` del body tiene que coincidir con el `_id` del usuario en
+sesión, si no `403 SIN_PERMISO`. No se inventó un helper nuevo: reusa
+`verificarOwnershipTurno` (ya existía en el mismo archivo, usado por
+aprobar/rechazar/cancelar, §15.4) — el mismo código y la misma forma de
+error para la misma clase de problema (una profesional actuando fuera de lo
+suyo), sólo que acá el "recurso" todavía no existe como turno, así que se le
+pasa un objeto liviano `{ profesionalId: new Types.ObjectId(p.profesionalId) }`
+en vez de un turno leído de la base. Sesión de admin: sin cambios, ninguna
+restricción. Sin sesión (`origen:'web'`): sin cambios.
+
+Ubicación exacta: antes del `Promise.all` que lee config/profesional/servicio
+— es una comparación de ids en memoria (profesionalId ya viene validado como
+ObjectId desde `crearTurno`, antes de abrir la transacción), no toca la base.
+Nota sobre la frase del modelo "se rechaza ANTES de abrir la transacción":
+en los hechos, `intentarCrearTurno` siempre corre DENTRO de
+`session.withTransaction()` (la arma `crearTurno`) — el driver de Mongo ya
+inició la transacción antes de invocar el callback, así que ningún código
+adentro de `intentarCrearTurno` puede ejecutarse literalmente "antes" de
+que la transacción esté abierta. Se interpretó la frase como "antes de
+cualquier operación de escritura/lectura de negocio", que es lo que importa
+en la práctica (nada se leyó ni se escribió todavía cuando se corta con
+403) — no se movió el chequeo a `crearTurno` (afuera de la transacción)
+porque el prompt pedía explícitamente que viviera en `intentarCrearTurno`,
+en el mismo punto donde se deriva `origen`.
+
+**Archivo tocado:** sólo `server/src/services/turnos.service.ts` (ningún
+otro — ni rutas, ni middleware, ni schema: todo lo que hacía falta ya
+existía de la entrega anterior).
+
+**Tests** (`server/src/routes/turnos.creacion.origen.test.ts`, extendido, no
+archivo nuevo — 4 tests más sobre los 7 que ya tenía):
+- Admin con `profesionalId` de cualquier profesional válida ⇒ sigue 201 sin
+  restricción (no-regresión explícita, aparte del caso ya cubierto
+  implícitamente por el test de "sin `respetarGrilla`" de la entrada
+  anterior).
+- Profesional logueada, `profesionalId` del body === su propio `_id` ⇒ 201,
+  confirmado (caso ya cubierto por el test de "también origen admin" de la
+  entrada anterior, pero se agregó una versión dedicada dentro del describe
+  nuevo de ownership para que quede documentado junto al caso negativo).
+- Profesional logueada, `profesionalId` de OTRA profesional (que también
+  presta el servicio, para que el único motivo de rechazo posible sea el
+  ownership y no una precondición de catálogo) ⇒ 403 SIN_PERMISO. Se
+  verificó explícitamente que no quedó ningún `Turno` (ni para la
+  profesional ajena ni para la logueada) ni ninguna `Notificacion` huérfana
+  en la base.
+
+**Verificación:** `npm run typecheck` limpio en los 4 workspaces. Suite
+completa: `shared` 10/10 verdes; `server` **148/148 verdes** (los 18 archivos
+de test, incluidos los 2 de `auth.routes.test.ts` que en la entrega anterior
+habían dado timeout por contención de CPU corriendo la suite completa —
+corrieron limpios esta vez, confirma que era ruido de entorno y no una
+regresión).
+
+**No se tocó** disponibilidad, el worker, ni
+`aprobarTurno`/`rechazarTurno`/`cancelarTurno` — sólo se agregó un chequeo a
+`intentarCrearTurno`.

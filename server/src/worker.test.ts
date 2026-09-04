@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Types } from 'mongoose';
+import { DateTime } from 'luxon';
 import { Configuracion, Servicio, Usuario, Turno, Notificacion } from './models';
 import { crearTurno } from './services/turnos.service';
 import { arrancarWorker, detenerWorker, cicloWorker } from './worker';
@@ -46,9 +47,12 @@ async function crearConfig() {
   });
 }
 
-// Turno real (vía el servicio, origen 'admin' para no depender de la grilla
-// de disponibilidad) — deja una notificación 'solicitud'/'whatsapp'
-// pendiente con programadaPara=ahora, lista para que el worker la tome.
+// Turno real (vía el servicio, origen 'web' — sin sesión, como siempre) —
+// deja una notificación 'solicitud'/'whatsapp' pendiente con
+// programadaPara=ahora, lista para que el worker la tome. `inicio` anclado a
+// la grilla (30min) a propósito: origen 'admin' ya no deja 'solicitud'
+// pendiente (§15.1, nace confirmado con 'confirmacion' en su lugar), así que
+// dejó de servir para este helper.
 async function crearTurnoParaTest() {
   const sufijo = new Types.ObjectId().toString();
   const servicio = await Servicio.create({
@@ -72,13 +76,19 @@ async function crearTurnoParaTest() {
     activo: true,
   });
 
+  const inicio = DateTime.now()
+    .setZone(ZONE)
+    .startOf('day')
+    .plus({ days: 3 })
+    .set({ hour: 10, minute: 0 })
+    .toJSDate();
+
   const resultado = await crearTurno({
     servicioId: servicio._id.toString(),
     profesionalId: profesional._id.toString(),
-    inicio: new Date(Date.now() + 72 * 3600_000).toISOString(),
+    inicio: inicio.toISOString(),
     nombre: 'Clienta Test',
     telefono: '3364123456',
-    origen: 'admin',
   });
 
   const turno = await Turno.findOne({ codigo: resultado.codigo });

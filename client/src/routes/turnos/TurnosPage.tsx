@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Drawer, useToast } from '../../components/ui';
+import type { CrearTurnoInput } from '@shared/schemas/turno.schema';
+import { Button, Drawer, useToast } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { HttpError } from '../../lib/http';
 import { agruparPorDiaLocal, finDiaLocalUtc, hoyLocalISODate, inicioDiaLocalUtc, sumarDiasISODate } from '../../lib/format/fecha';
@@ -7,7 +8,16 @@ import * as api from './api';
 import { AccionesTurno } from './components/AccionesTurno';
 import { DetalleTurno } from './components/DetalleTurno';
 import { FilaTurno } from './components/FilaTurno';
-import { ESTADOS_TURNO, type FiltroEstado, type ProfesionalFiltro, type TurnoPanel, type TurnoPanelLista } from './types';
+import { NuevoTurnoDrawer } from './components/NuevoTurnoDrawer';
+import {
+  ESTADOS_TURNO,
+  type FiltroEstado,
+  type ProfesionalFiltro,
+  type ResultadoCrearTurno,
+  type SlotDisponible,
+  type TurnoPanel,
+  type TurnoPanelLista,
+} from './types';
 import './TurnosPage.css';
 
 const RANGO_DEFAULT_DIAS = 30;
@@ -53,6 +63,10 @@ export function TurnosPage() {
   const [detalleError, setDetalleError] = useState<string | null>(null);
 
   const [ocupados, setOcupados] = useState<Set<string>>(new Set());
+
+  // Alta manual — "Nuevo turno" (frontend.md §4.4). Visible para AMBOS roles.
+  const [nuevoTurnoAbierto, setNuevoTurnoAbierto] = useState(false);
+  const [creandoTurno, setCreandoTurno] = useState(false);
 
   const rangoValido = desde <= hasta;
 
@@ -148,6 +162,35 @@ export function TurnosPage() {
   const cancelar = (id: string, motivo?: string) =>
     ejecutarAccion(id, () => api.cancelarTurno(id, motivo), 'Turno cancelado.');
 
+  // Alta manual (frontend.md §4.4): MISMO POST /api/turnos público — el server
+  // deriva origen:'admin' de la sesión, nace CONFIRMADO directo (un solo
+  // submit, sin encadenar aprobar). 409 SLOT_OCUPADO es el único código con
+  // manejo especial (toast + le pasamos los slots frescos al drawer para que
+  // refresque su propia grilla, mismo criterio que client-publico §4.11); el
+  // resto de los códigos (403 SIN_PERMISO, 400 FUERA_DE_HORARIO/
+  // SERVICIO_NO_PRESTADO, 404, etc.) cae en el toast genérico — igual que
+  // ServiciosPage/UsuarioDrawer con sus errores no especiales.
+  async function crearTurnoManual(input: CrearTurnoInput): Promise<ResultadoCrearTurno> {
+    setCreandoTurno(true);
+    try {
+      await api.crearTurnoManual(input);
+      mostrarToast('Turno creado y confirmado.', 'exito');
+      setNuevoTurnoAbierto(false);
+      await cargarTurnos();
+      return { ok: true };
+    } catch (err) {
+      if (err instanceof HttpError && err.codigo === 'SLOT_OCUPADO') {
+        const detalle = err.detalle as { slots?: SlotDisponible[] } | undefined;
+        mostrarToast('Ese horario se acaba de ocupar. Elegí otro.', 'info');
+        return { ok: false, slotsOcupado: detalle?.slots ?? [] };
+      }
+      mostrarToast(mensajeError(err), 'error');
+      return { ok: false };
+    } finally {
+      setCreandoTurno(false);
+    }
+  }
+
   const listaVisible = useMemo(
     () => (filtroEstado === 'todos' ? turnos : turnos.filter((t) => t.estado === filtroEstado)),
     [turnos, filtroEstado]
@@ -173,12 +216,20 @@ export function TurnosPage() {
   return (
     <div className="turnos-page">
       <div className="turnos-page__head">
-        <h1 className="turnos-page__titulo">Turnos</h1>
-        <div className="turnos-page__sub">
-          {contadores.pendiente > 0
-            ? `${contadores.pendiente} ${contadores.pendiente === 1 ? 'turno pendiente' : 'turnos pendientes'} por revisar`
-            : 'Sin turnos pendientes en este rango'}
+        <div>
+          <h1 className="turnos-page__titulo">Turnos</h1>
+          <div className="turnos-page__sub">
+            {contadores.pendiente > 0
+              ? `${contadores.pendiente} ${contadores.pendiente === 1 ? 'turno pendiente' : 'turnos pendientes'} por revisar`
+              : 'Sin turnos pendientes en este rango'}
+          </div>
         </div>
+        {/* Visible para AMBOS roles (frontend.md §4.4) — una profesional puede
+            cargar turnos para su propia agenda, misma filosofía que ya tiene
+            para aprobar/rechazar/cancelar los suyos. */}
+        <Button variant="primary" onClick={() => setNuevoTurnoAbierto(true)}>
+          Nuevo turno
+        </Button>
       </div>
 
       <div className="turnos-page__filtros">
@@ -275,6 +326,14 @@ export function TurnosPage() {
           <DetalleTurno turno={detalle} />
         ) : null}
       </Drawer>
+
+      {nuevoTurnoAbierto ? (
+        <NuevoTurnoDrawer
+          guardando={creandoTurno}
+          onCrear={crearTurnoManual}
+          onCerrar={() => setNuevoTurnoAbierto(false)}
+        />
+      ) : null}
     </div>
   );
 }
