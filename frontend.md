@@ -677,6 +677,22 @@ GET /disponibilidad 60/min; GET /servicios* 60/min (§14 backend).
 
 ## §5 Registro de implementación
 
+
+### 2026-09-04 — Rewrite SPA en Hostinger vía .htaccess (fix 404 en deep-link/refresh)
+
+**Síntoma:** entrar directo a panel.camilagonzalezbelleza.com/login (o refrescar
+en cualquier ruta ≠ /) devolvía el 404 de Hostinger — Apache busca un archivo
+físico /login en dist/, no existe, React Router nunca arranca.
+
+**Fix:** client/public/.htaccess con rewrite SPA (Apache mod_rewrite): sirve
+archivos/carpetas reales tal cual, y cualquier otra ruta la reescribe a
+index.html para que React Router la resuelva client-side. Va en public/ para que
+Vite lo copie a dist/ en cada build (queda versionado, no se pierde en redeploy).
+
+**Aplica sólo a client/ (panel):** es la SPA con routing (React Router,
+/login, /turnos, etc.). client-publico/ es efectivamente single-route, pero si
+en el futuro suma rutas, necesita el mismo .htaccess.
+
 Bitácora de código, append-only — no especificación. La mantiene Claude Code.
 Cada entrada: qué se implementó al cerrar una tarea, con qué archivos y con qué
 resultado de test + el guión de prueba manual (§1, workflow). La especificación

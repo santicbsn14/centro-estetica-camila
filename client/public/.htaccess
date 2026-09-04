@@ -1,0 +1,10 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  # Si el request es un archivo o carpeta real, servilo tal cual
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+  # Cualquier otra cosa → index.html (deja que React Router maneje la ruta)
+  RewriteRule ^ index.html [L]
+</IfModule>
