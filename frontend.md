@@ -748,6 +748,26 @@ portfolio) son contenido ESTÁTICO del footer — NO se consumen de
 `configuracion` (que es admin-only, §15.8, la pública no tiene sesión para
 pedirlo). Hardcodeados en el componente.
 
+CORRECCIÓN DE ESTILO 2026-09-10 (sobre `footer-camila.html` v1 — usar
+`footer-camila-v4.html` como referencia visual definitiva, no la v1):
+
+- **Íconos en color de marca real**, no monocromo (v1 los tenía en gris/tinta
+  como el resto del sitio; se pide explícitamente en color): WhatsApp
+  `#25D366` de fondo con el glifo oficial en blanco (globo de diálogo +
+  auricular, no una silueta de chat genérica — path exacto en
+  `footer-camila-v4.html`); Instagram con el degradado real de marca
+  (`radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%,
+  #d6249f 60%, #285AEB 90%)`) y el glifo de cámara en blanco; Ubicación con
+  fondo rojo `#EA4335` (rojo pin de mapa, convención reconocible) y el ícono
+  de pin en blanco.
+- **Layout: bloque centrado, filas alineadas en columna entre sí** — NO cada
+  fila centrada individualmente (eso las deja con distinto punto de inicio
+  según el largo del texto). Es un wrapper `justify-content:center` afuera +
+  un `inline-flex; flex-direction:column; align-items:flex-start` adentro,
+  así las 3 filas comparten el mismo borde izquierdo (misma columna de
+  inicio) y el bloque completo (con el ancho de la fila más larga,
+  "@camigonz.belleza") queda centrado en el footer.
+
 ## §5 Registro de implementación
 
 Bitácora de código, append-only — no especificación. La mantiene Claude Code.
@@ -3396,3 +3416,16 @@ una ventana de incógnito.
    - Instagram → perfil `@camigonz.belleza`.
    - Dirección → Google Maps buscando "Moreno 1856 Villa Constitución".
    - "Santiago Viale" (sólo el nombre es link) → `santiago-viale-web.vercel.app`.
+
+**Ajuste 2026-09-10 (corrección de estilo §4.13, ref. `footer-camila-v4.html`):**
+íconos del footer pasados a color de marca real — WhatsApp fondo `#25D366` +
+glifo oficial (path de `footer-camila-v4.html`, viewBox `0 0 448 512`),
+Instagram fondo con el degradado de marca (`radial-gradient` exacto de §4.13),
+ubicación fondo `#EA4335` + pin, glifos en blanco. Layout: `.foot-links` ahora
+es wrapper `justify-content:center` + `.foot-links-inner` `inline-flex` columna
+`align-items:flex-start` — las 3 filas comparten borde izquierdo y el bloque
+queda centrado. Copy del subtítulo de WhatsApp: "Consultas y turnos" →
+"Atención personalizada". Nada más cambió (links, orden, firma, montaje sólo
+en paso 1 = igual). Colores de plataforma hardcodeados (no son tokens de §3,
+marca monocroma). `npm run typecheck` + `npm run build --workspace=client-publico`
+limpios (174 módulos). Sin contradicciones con §1–§16.

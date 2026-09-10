@@ -638,20 +638,34 @@ input[aria-invalid='true'] {
   color: #fff;
 }
 
-/* Footer de contacto (frontend.md §4.13) — clonado de mockups/footer-camila.html,
-   traducido a los tokens de client-publico. Sólo se renderiza en el paso 1
-   (ver ReservaPage.tsx). El mockup usaba un gris extra claro (--t30) para la
-   firma que no existe en tokens.css; se reusa --color-tinta-48. */
+/* Footer de contacto (frontend.md §4.13, corrección de estilo 2026-09-10) —
+   clonado de mockups/footer-camila-v4.html, traducido a los tokens de
+   client-publico. Sólo se renderiza en el paso 1 (ver ReservaPage.tsx). El
+   mockup usaba un gris extra claro (--t30) para la firma que no existe en
+   tokens.css; se reusa --color-tinta-48.
+
+   Colores de marca de los íconos (WhatsApp/Instagram/Maps) hardcodeados a
+   propósito: no son tokens del sistema de diseño (marca monocroma, §3), son
+   los colores oficiales de cada plataforma. */
 .site-footer {
   border-top: var(--borde-hairline);
   padding: 26px 18px 30px;
   margin-top: 8px;
 }
+/* Bloque centrado con las filas alineadas en columna entre sí: wrapper con
+   justify-content:center por fuera, inline-flex column align-items:flex-start
+   por dentro — así las 3 filas comparten el mismo borde izquierdo y el bloque
+   entero (ancho de la fila más larga) queda centrado en el footer. */
 .foot-links {
   display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.foot-links-inner {
+  display: inline-flex;
   flex-direction: column;
   gap: 12px;
-  margin-bottom: 20px;
+  align-items: flex-start;
 }
 .foot-link {
   display: flex;
@@ -663,26 +677,34 @@ input[aria-invalid='true'] {
   font-weight: 500;
 }
 .foot-link .ic {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  background: var(--color-blanco);
-  border: var(--borde-hairline);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: grid;
   place-items: center;
   flex: none;
-  color: var(--color-tinta-72);
-  transition:
-    border-color 0.15s,
-    color 0.15s;
+  color: #fff;
 }
-.foot-link:hover .ic {
-  border-color: var(--color-tinta);
-  color: var(--color-tinta);
+.foot-link .ic.wa {
+  background: #25d366;
+}
+.foot-link .ic.ig {
+  background: radial-gradient(
+    circle at 30% 107%,
+    #fdf497 0%,
+    #fdf497 5%,
+    #fd5949 45%,
+    #d6249f 60%,
+    #285aeb 90%
+  );
+}
+.foot-link .ic.loc {
+  background: #ea4335;
 }
 .foot-link .tx {
   display: flex;
   flex-direction: column;
+  text-align: left;
 }
 .foot-link .t1 {
   font-weight: 600;
