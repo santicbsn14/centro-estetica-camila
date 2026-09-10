@@ -8,6 +8,7 @@ import { Catalogo } from './components/Catalogo';
 import { Grilla } from './components/Grilla';
 import { HojaDatos } from './components/HojaDatos';
 import { Exito } from './components/Exito';
+import { Footer } from './components/Footer';
 import { Toast, type ToastState } from './components/Toast';
 import type { Carga, DatosClienta, ProfesionalPublico, ServicioPublico, Slot, TurnoCreado } from './types';
 import './ReservaPage.css';
@@ -252,6 +253,10 @@ export function ReservaPage() {
           <Exito resultado={resultado} profesionalNombre={profesionalElegido.nombre} />
         )}
       </main>
+
+      {/* Footer de contacto: SOLO en el catálogo (paso 1), nunca sobre
+          grilla/form/éxito — frontend.md §4.13. */}
+      {paso === 1 && <Footer />}
 
       <div className={`scrim${sheetAbierto ? ' scrim--open' : ''}`} onClick={cerrarSheet} />
       <aside className={`sheet${sheetAbierto ? ' sheet--open' : ''}`}>

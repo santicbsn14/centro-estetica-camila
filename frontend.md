@@ -717,6 +717,36 @@ Rate limits a tener en cuenta (no bloquean UI, pero si el server devuelve 429 ha
 que mostrarlo, no fallar en silencio): POST /api/turnos 20/10min por IP;
 GET /disponibilidad 60/min; GET /servicios* 60/min (§14 backend).
 
+### 4.13 Favicon + footer de contacto (client-publico, y favicon en client) — mockup cerrado
+
+**Favicon.** Reemplaza el favicon default de Vite en AMBAS apps (`client/` y
+`client-publico/`) — mismo asset, mismo costo, consistencia de marca. Assets en
+`mockups/`: `favicon.ico` (multi-resolución 16/32/48, el estándar), más PNG
+sueltos en 16/32/48/180("apple-touch-icon")/192/512. Origen: recorte del
+monograma "cg"+corazón (sin el anillo de texto de la hoja de marca — a tamaño
+16-32px el anillo se vuelve ilegible, se usa sólo el símbolo central) sobre
+fondo transparente. Copiar a `public/` de cada app y actualizar los `<link
+rel="icon">`/`<link rel="apple-touch-icon">` del `index.html` de cada una.
+
+**Footer (SOLO client-publico, SOLO en la pantalla de catálogo/home — NO en
+grilla/form/éxito, decisión Web: mantener el flujo transaccional sin
+distracciones de marketing una vez que la clienta ya está reservando).**
+Referencia visual: `mockups/footer-camila.html`. Tres links con ícono + texto,
+más firma:
+- **WhatsApp**: `https://api.whatsapp.com/send?phone=543364328062&text=Hola!%20
+  Necesito%20un%20turno%20y%2Fo%20lista%20de%20precios%20de%20los%20servicios%20
+  %F0%9F%99%8C%F0%9F%8F%BB` — usar EXACTO tal cual (mensaje precargado incluido),
+  `target="_blank" rel="noopener"`.
+- **Instagram**: `https://instagram.com/camigonz.belleza`, mismo target/rel.
+- **Dirección**: "Moreno 1856, Villa Constitución" — clickeable, abre Google Maps:
+  `https://www.google.com/maps/search/?api=1&query=Moreno+1856+Villa+Constituci%C3%B3n`.
+- **Firma**: "Desarrollado por Santiago Viale" → `https://santiago-viale-web.vercel.app`,
+  mismo target/rel. Texto discreto (gris, tamaño chico), el nombre linkeado.
+
+Estos 4 datos (número de WhatsApp, handle de Instagram, dirección, URL de
+portfolio) son contenido ESTÁTICO del footer — NO se consumen de
+`configuracion` (que es admin-only, §15.8, la pública no tiene sesión para
+pedirlo). Hardcodeados en el componente.
 
 ## §5 Registro de implementación
 
@@ -3284,3 +3314,85 @@ cargado y un servicio activo que ella preste (Configuración → Profesionales
    `npm run dev --workspace=server` con el drawer ya abierto y reintentar el
    fetch de servicios/profesionales/disponibilidad) → cada sección cae en su
    propio mensaje de error, sin romper el resto del form.
+
+### 2026-09-10 — Favicon (ambas apps) + footer de contacto (client-publico, §4.13)
+
+Dos entregas chicas de marca en un solo pase. Sin lógica: assets estáticos +
+markup.
+
+**Favicon — `client/` y `client-publico/`.** Los 7 assets (`favicon.ico`
+multi-res + PNG 16/32/48/180/192/512) sólo estaban en
+`client-publico/mockups/` — se copiaron a `public/` de LAS DOS apps (mismo
+símbolo, recorte del monograma "cg"+corazón sin el anillo de texto). Vite los
+emite a `dist/` tal cual (verificado en ambos builds).
+
+- `client/index.html`: no tenía NINGÚN `<link rel="icon">` (el default de Vite
+  ya se había sacado en algún pase anterior, no en el working tree). Se
+  agregó el set completo: `.ico` con `sizes="48x48"` de fallback + PNG
+  explícitos 16/32/48/192/512 + `apple-touch-icon` → `favicon-180.png`.
+- `client-publico/index.html`: reemplazado el único `<link rel="icon"
+  href="/favicon.png">` por el mismo set. El `favicon.png` viejo
+  (`client-publico/public/`) se borró — estaba huérfano, sólo lo referenciaba
+  ese link. No se renombró ningún asset: los `<link>` apuntan a los nombres
+  tal como se copiaron (`favicon-180.png` para apple-touch, no
+  `apple-touch-icon.png`).
+
+**Footer de contacto — SOLO `client-publico`, SOLO paso 1 (catálogo).**
+Componente nuevo `routes/reserva/components/Footer.tsx`, montado en
+`ReservaPage.tsx` con `{paso === 1 && <Footer />}` como hermano de `<main>`
+(no dentro) — no aparece en grilla/form/éxito (decisión Web). Clonado de
+`mockups/footer-camila.html`: 3 links con ícono SVG inline + texto (WhatsApp
+con el mensaje precargado EXACTO de §4.13, Instagram, dirección → Google
+Maps) y la firma "Desarrollado por Santiago Viale" → portfolio. Los 4 links
+con `target="_blank" rel="noopener"`. Datos hardcodeados en el componente (no
+salen de `configuracion`, que es admin-only). CSS agregado al final de
+`ReservaPage.css` (`.site-footer`/`.foot-*`), traducido a los tokens del
+proyecto.
+
+- **`--t30` del mockup no existe en `tokens.css`:** la firma discreta usaba un
+  gris extra claro (`--t30`) que no está entre los tokens cerrados (§3 sólo
+  define `--color-tinta-72` y `--color-tinta-48`). Se reusó
+  `--color-tinta-48` para el texto de la firma y `--color-tinta-72` para el
+  nombre linkeado (hover → `--color-tinta`). No se agregó token nuevo.
+
+**Tests / typecheck:** `npm run typecheck` (shared + server + client +
+client-publico) limpio. `npm run build` limpio en las dos apps (client-publico
+174 módulos, client 238). Server **148 tests**, shared **10** — sin cambios
+(tarea de front puro, no se tocó `server/`/`shared/`; `client`/`client-publico`
+siguen sin test runner, la barra es typecheck + build + guión manual). §14
+backend no aplica.
+
+**Sin contradicciones** contra §1–§16 ni contra la especificación de §4.13
+durante la implementación.
+
+**Guión de prueba manual:**
+
+Levantar: `npm run dev` desde la raíz (server `:4000` + ambos clients). Para
+ver los favicons sin caché del navegador conviene hard-reload (Ctrl+Shift+R) o
+una ventana de incógnito.
+
+1. **Favicon — panel:** abrir `http://localhost:5173` (el panel, `client/`).
+   En la pestaña del navegador se ve el monograma "cg"+corazón, NO el globo
+   default de Vite ni el ícono "documento en blanco". Devtools → Network,
+   recargar → se piden `favicon-32.png` (o el que elija el browser) y
+   `favicon.ico`, todos 200.
+2. **Favicon — web pública:** abrir `http://localhost:5174` (o el puerto que
+   levante `client-publico`). Mismo ícono en la pestaña. En iOS/Safari
+   "Agregar a inicio" (o simular con `<link rel="apple-touch-icon">` en
+   devtools) toma `favicon-180.png`.
+3. **Footer visible SÓLO en home:** en la web pública, en la pantalla de
+   catálogo (paso 1, la lista de servicios) → al pie aparece el footer:
+   WhatsApp / @camigonz.belleza / Moreno 1856 y abajo "Desarrollado por
+   Santiago Viale" en gris chico.
+4. **Footer NO aparece en el resto del flujo:** elegir un servicio → una
+   profesional → se pasa a la grilla (paso 2): el footer YA NO está. Elegir
+   un horario → se abre la hoja de datos: sigue sin footer. Completar y
+   confirmar → pantalla de éxito (paso 3): sin footer. Tocar "volver" hasta
+   el catálogo → el footer reaparece.
+5. **Los 4 links abren donde corresponde** (todos en pestaña nueva):
+   - WhatsApp → `api.whatsapp.com` / WhatsApp Web con el chat a
+     +54 3364 32-8062 y el mensaje "Hola! Necesito un turno y/o lista de
+     precios de los servicios 🙌🏻" YA tipeado en la caja.
+   - Instagram → perfil `@camigonz.belleza`.
+   - Dirección → Google Maps buscando "Moreno 1856 Villa Constitución".
+   - "Santiago Viale" (sólo el nombre es link) → `santiago-viale-web.vercel.app`.

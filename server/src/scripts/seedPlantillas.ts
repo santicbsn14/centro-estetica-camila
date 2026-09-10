@@ -1,4 +1,5 @@
-import 'dotenv/config';
+
+require("node:dns/promises").setServers(["1.1.1.1", "8.8.8.8"]);import 'dotenv/config';
 import '../models';
 import { connectDB, disconnectDB } from '../config/db';
 import { Plantilla } from '../models';
