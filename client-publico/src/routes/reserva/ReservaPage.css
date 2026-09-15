@@ -41,10 +41,19 @@ header.top {
   align-items: center;
   gap: 10px;
 }
+/* .toprow-spacer sólo aporta en desktop (ver @media abajo): equilibra el
+   ancho de .back para que .lockup, centrada, quede flanqueada por dos huecos
+   simétricos de 32px. En mobile no hace falta — el sello no se centra, se
+   alinea al borde derecho (frontend.md §4.13, ajuste 2026-09-15). */
 .toprow-spacer {
   width: 32px;
   flex: none;
+  display: none;
 }
+/* .back siempre ocupa su espacio en el flex (visibility, no display): con
+   display:none el hueco desaparecía de un solo lado y el sello quedaba
+   corrido respecto al centro real del header (bug corregido, frontend.md
+   §4.13, ajuste 2026-09-15). */
 .back {
   width: 32px;
   height: 32px;
@@ -52,26 +61,39 @@ header.top {
   border: var(--borde-hairline-fuerte);
   background: var(--color-blanco);
   color: var(--color-tinta-72);
-  display: none;
+  display: flex;
+  visibility: hidden;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex: none;
 }
 .back.back--show {
-  display: flex;
+  visibility: visible;
 }
-/* Sello de marca (mockups/logo_sm.png) centrado y solo — el logo ya trae el
-   nombre "CAMILA GONZÁLEZ / SALÓN DE BELLEZA", no lleva texto al lado. El
-   spacer de 32px equilibra el botón "volver" para que el sello quede centrado. */
+/* Sello de marca (mockups/logo_sm.png) — el logo ya trae el nombre "CAMILA
+   GONZÁLEZ / SALÓN DE BELLEZA", no lleva texto al lado. Mobile (<460px):
+   alineado arriba a la derecha, como marca de esquina — centrado le comía
+   espacio vertical arriba de "Reservá tu turno" sin aportar jerarquía (el
+   hero del paso 1 ya tiene el sello grande, §4.11). Desktop (≥460px, ver
+   @media abajo): centrado respecto al contenedor del header (frontend.md
+   §4.13, ajuste 2026-09-15). */
 .lockup {
   flex: 1;
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
 }
 .lockup img {
   height: 38px;
   width: auto;
+}
+@media (min-width: 460px) {
+  .toprow-spacer {
+    display: block;
+  }
+  .lockup {
+    justify-content: center;
+  }
 }
 .steps {
   display: flex;

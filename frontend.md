@@ -768,6 +768,25 @@ CORRECCIÓN DE ESTILO 2026-09-10 (sobre `footer-camila.html` v1 — usar
   inicio) y el bloque completo (con el ancho de la fila más larga,
   "@camigonz.belleza") queda centrado en el footer.
 
+
+### Posicionamiento del logo del header — DECISIÓN CERRADA (ajusta §4.13)
+
+§4.13 definía el logo del header centrado, sin texto al lado. Ajuste sobre
+eso: el centrado en desktop tenía un corrimiento visual (no perfectamente
+centrado respecto al contenedor) — se corrige. Además se agrega variante
+mobile:
+
+- **Desktop:** logo centrado horizontalmente respecto al contenedor del
+  header (no del viewport completo, si el header tiene max-width/padding
+  distinto al body).
+- **Mobile (breakpoint: [A DEFINIR — reusar el existente del proyecto]):**
+  logo alineado arriba a la derecha, NO centrado. Mismo asset (`logo_sm.png`),
+  mismo tamaño — sólo cambia el alignment del contenedor.
+
+Motivo mobile: en pantallas chicas el logo centrado le come espacio vertical
+arriba de "Reservá tu turno" sin aportar jerarquía; a la derecha queda como
+marca de esquina, patrón más común en flujos mobile de reserva.
+
 ## §5 Registro de implementación
 
 Bitácora de código, append-only — no especificación. La mantiene Claude Code.
@@ -3447,3 +3466,62 @@ desde el panel que no está en el mapeo cae en un bucket "Otros" (fallback
 obligatorio, nunca desaparece del catálogo). Sin alerta automática; el
 síntoma es visual, no un error. Sin fase 2 planeada — si el volumen de
 altas/renombres crece, ahí vale mover a campo real en el modelo.
+
+### 2026-09-15 — Posicionamiento del logo del header (ajusta §4.13) — DECISIÓN CERRADA
+
+El bloque de Web dejaba el breakpoint mobile sin definir ("[A DEFINIR —
+reusar el existente del proyecto]"). `client-publico` es mobile-first y no
+tenía todavía ningún breakpoint por ancho escrito en CSS (`global.css` línea
+19-22 lo dice explícito: "no hay reglas desktop-first acá para corregir en
+mobile"); el único número de layout ya existente en esta app es el
+`max-width:460px` del contenedor `.app` (`ReservaPage.css`). Se lo pregunté
+a Santiago en vez de asumir, porque el otro candidato obvio (`760px`) es el
+breakpoint real del panel (`client/`, desktop-first) y mezclar los dos no es
+lo mismo que "reusar el existente del proyecto" para esta superficie.
+Confirmado: **460px**, con `@media (min-width:460px)` para la variante
+desktop (coherente con el mobile-first ya documentado en §4.10/§4.13).
+
+De paso se corrigió el bug real que motivó el ajuste: `.back` usaba
+`display:none` cuando no hay botón "volver" (paso 1), así que el hueco de
+32px sólo existía del lado del `.toprow-spacer` — `.lockup` (flex:1,
+`justify-content:center`) quedaba en una caja asimétrica y el sello se veía
+corrido, no centrado de verdad respecto al header.
+
+**Archivo:** `client-publico/src/routes/reserva/ReservaPage.css` (sólo CSS,
+sin cambios de componente — `ReservaPage.tsx` no se tocó).
+- `.back`: `display:none` → `display:flex` + `visibility:hidden` (y
+  `.back--show` pasa a togglear `visibility`, no `display`). Reserva sus
+  32px en el flex siempre, se muestre o no el botón.
+- `.lockup`: `justify-content:center` (fijo) → `flex-end` por default
+  (mobile, sello pegado al borde derecho) y `center` sólo dentro de
+  `@media (min-width:460px)`.
+- `.toprow-spacer`: `display:none` por default (no hace falta el
+  contrapeso si el sello no se centra) y `display:block` sólo en el mismo
+  `@media (min-width:460px)`, donde vuelve a equilibrar a `.back` para el
+  centrado real.
+
+**Sin contradicciones** contra §1–§16 ni contra el resto de §4.13.
+
+`npm run typecheck` limpio (los 4 workspaces; no se tocó TS/TSX, sólo CSS).
+`npm run build --workspace=client-publico` limpio (175 módulos). Sin test
+runner en `client-publico` (igual que footer/favicon, ver entrada anterior)
+— barra: typecheck + build + guión manual.
+
+**Guión de prueba manual:**
+
+Levantar `npm run dev` desde la raíz, abrir la web pública
+(`http://localhost:5174` o el puerto que asigne Vite).
+
+1. **Mobile real** (devtools → responsive, <460px, ej. 390px iPhone): en el
+   catálogo (paso 1, sin botón "volver") el sello queda arriba a la
+   DERECHA, pegado al borde — NO centrado.
+2. **Desktop / viewport ≥460px** (devtools a 460px exactos y a algo más
+   ancho, ej. 800px): el sello queda CENTRADO respecto al header — mismo
+   ancho de hueco a ambos lados, sin corrimiento visual.
+3. **Con botón "volver" visible** (paso 2 en adelante, cualquier ancho): el
+   botón aparece a la izquierda sin que el sello salte de posición al
+   aparecer/desaparecer (antes, con `display:none`, el hueco cambiaba de
+   tamaño al togglear el botón).
+4. Redimensionar la ventana cruzando los 460px con el flujo ya en paso 2+:
+   el sello pasa de esquina a centrado (y viceversa) sin salto brusco ni
+   overlap con el botón "volver".
