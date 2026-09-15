@@ -172,6 +172,13 @@
   font-size: 0.88rem;
 }
 
+.servicio-drawer__contador {
+  font-size: 0.72rem;
+  color: var(--color-tinta-48);
+  margin: 0.3rem 0 0;
+  text-align: right;
+}
+
 .servicio-drawer__grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;

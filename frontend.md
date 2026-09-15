@@ -3429,3 +3429,21 @@ queda centrado. Copy del subtítulo de WhatsApp: "Consultas y turnos" →
 en paso 1 = igual). Colores de plataforma hardcodeados (no son tokens de §3,
 marca monocroma). `npm run typecheck` + `npm run build --workspace=client-publico`
 limpios (174 módulos). Sin contradicciones con §1–§16.
+
+### Categorización visual de servicios en catálogo público — DECISIÓN CERRADA
+
+Agrupación por categoría (UÑAS, CEJAS, PESTAÑAS, TRATAMIENTOS FACIALES,
+MASAJES) es puramente de presentación en `client-publico` — NO se agrega
+campo `categoria` al modelo (modelo-datos-turnos.md §4 servicios sigue
+igual). Mapeo hardcodeado `nombre → categoria` vive en el front, no en DB
+ni en `@shared`.
+
+Orden de categorías: fijo, en el array de categorías del front (no derivado
+de `orden` de servicio, que sigue rigiendo el orden DENTRO de cada
+categoría, igual que en la lista plana anterior).
+
+**Riesgo aceptado:** el mapeo es por nombre exacto — un servicio renombrado
+desde el panel que no está en el mapeo cae en un bucket "Otros" (fallback
+obligatorio, nunca desaparece del catálogo). Sin alerta automática; el
+síntoma es visual, no un error. Sin fase 2 planeada — si el volumen de
+altas/renombres crece, ahí vale mover a campo real en el modelo.

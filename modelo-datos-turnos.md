@@ -914,7 +914,7 @@ todavía en el primer insert de un test, dando falsos negativos en aserciones
 de unicidad. Fix en `dbTestSetup.ts`: `await Promise.all(...models.map(m =>
 m.init()))` tras conectar. Detalle en §11.
 
-**Estado: CRUD del panel COMPLETO. 148 tests server + 10 shared verdes,
+**Estado: CRUD del panel COMPLETO. 149 tests server + 10 shared verdes,
 typecheck limpio en el monorepo.**
 
 **Cerrado desde entonces:**
@@ -1466,6 +1466,20 @@ reescribe turnos viejos. NO se valida contra turnos futuros — la advertencia
   un turno futuro con snapshot del servicio sigue intacto.
 - PATCH `activo:true` sobre inactivo ⇒ reactiva.
 - profesional (no admin) sobre cualquier ruta del namespace ⇒ 403.
+
+### Límite de `descripcion` en servicios — DECISIÓN CERRADA
+
+`descripcion` no tenía `.max()` en `crearServicioSchema`/`editarServicioSchema`
+(§10/§15.7) — el límite real era sólo un `maxLength` corto en el textarea del
+panel, insuficiente para describir tratamientos faciales con detalle. Se sube
+el tope a 500 caracteres, ahora explícito en el schema Zod compartido:
+
+  descripcion: z.string().max(500).optional()
+
+Motivo de ponerle tope igual (no dejarlo abierto): el público consume este
+campo directo en el acordeón del catálogo (§15.3) — sin límite, una
+descripción larga rompe el layout de la card.
+
 
 ### 15.8 CRUD administrativo — configuración (singleton)
 
@@ -2908,3 +2922,84 @@ regresión).
 **No se tocó** disponibilidad, el worker, ni
 `aprobarTurno`/`rechazarTurno`/`cancelarTurno` — sólo se agregó un chequeo a
 `intentarCrearTurno`.
+
+### 2026-09-15 — Tope de 500 caracteres en `descripcion` + agrupado por categoría del catálogo público
+
+Tres cambios independientes de UI/validación, sin tocar el modelo de datos.
+
+**1) Schema (`shared/src/schemas/servicio.schema.ts`):** `.max(500)` agregado
+al campo `descripcion` en `crearServicioSchema` y `editarServicioSchema` (era
+`z.string().optional()` sin tope). Sin cambios de tipo (`string | undefined`
+sigue igual), sólo la validación de longitud.
+
+**2) Panel (`client/src/routes/servicios/components/ServicioDrawer.tsx`):**
+`maxLength={500}` en el `<textarea>` de descripción + contador
+`{descripcion.length}/500` debajo del campo (`.servicio-drawer__contador`,
+nueva clase en `ServiciosPage.css`).
+
+**3) Client-publico, catálogo (paso 1 de `ReservaPage`, acordeón):**
+- **Agrupado por categoría** (`client-publico/src/routes/reserva/constants.ts`,
+  archivo nuevo): mapeo `nombre→categoría` hardcodeado (`NOMBRE_A_CATEGORIA`,
+  match `.toLowerCase()`), fijo a este client — no toca `@shared` ni el
+  modelo, a propósito (frontend.md, no reabre `modelo-datos-turnos.md`
+  §1-16). Categorías en orden fijo: UÑAS, CEJAS, PESTAÑAS, TRATAMIENTOS
+  FACIALES, MASAJES, y bucket `Otros` al final para lo no mapeado.
+  `Catalogo.tsx` arma los buckets con un solo `for` sobre `servicios.datos`
+  (sin reordenar) y renderiza sólo las categorías con al menos un servicio.
+  El orden dentro de cada bucket es el orden de llegada del array — GET
+  `/api/servicios` (`servicios.routes.ts`) ya lo devuelve ordenado por
+  `orden` server-side, pero **ese campo `orden` no viaja en el body de la
+  respuesta** (sólo se usa para el `.sort()` de Mongo, no está en el
+  `.select()` ni en el `.map()` de la ruta) — así que el agrupado no
+  reordena por `orden` (no existe del lado del cliente), sólo respeta el
+  orden ya resuelto por el server al repartir en buckets. Mapeo de nombres
+  provisto por Santiago (incluye "Reflexología podal opción 2" en MASAJES,
+  sin chequear contra la base si tiene `duracionMin`/precio cargados —
+  decisión explícita de Santiago: el modelo exige `duracionMin` en
+  Mongoose, no puede venir null/undefined si está `activo`).
+- **Sin truncar la descripción:** no había `line-clamp`/`max-height` sobre
+  `.svc-hd .d` (se verificó con grep en todo `client-publico/src`, no hay
+  ningún `truncate`/`overflow-wrap` previo) — la card ya crecía con el
+  contenido. Se agregó `overflow-wrap: anywhere` como defensivo ante una
+  palabra sin espacios de 500 caracteres. El único `max-height` fijo que
+  existe en esa zona (`.svc.open .svc-body { max-height: 320px }`) es del
+  acordeón de profesionales, no de la descripción — no se tocó, es otro
+  elemento.
+- **Precio destacado sobre duración:** `.svc-hd .meta` dejó de compartir
+  una sola clase `.num` para ambos valores. Ahora `.duracion` (11.5px,
+  `--color-tinta-48`) vs `.precio` (13px, `font-weight:700`,
+  `--color-tinta`, un separador `·` en medio con el mismo gris apagado).
+  `.num` (utilidad global de `styles/global.css`, `tabular-nums`) se
+  mantiene en ambos spans.
+
+**Archivos:**
+- `shared/src/schemas/servicio.schema.ts`
+- `client/src/routes/servicios/components/ServicioDrawer.tsx`
+- `client/src/routes/servicios/ServiciosPage.css`
+- `client-publico/src/routes/reserva/constants.ts` (nuevo)
+- `client-publico/src/routes/reserva/components/Catalogo.tsx`
+- `client-publico/src/routes/reserva/ReservaPage.css`
+- `server/src/routes/admin/servicios.routes.test.ts` (test nuevo, ver abajo)
+
+**Tests:** un test nuevo en `admin/servicios.routes.test.ts` —
+`descripcion` de 500 caracteres ⇒ 201; 501 ⇒ 400. `client` y
+`client-publico` no tienen infra de test todavía (§14: "Sin empezar
+todavía" en `client`; `client-publico` tampoco tiene `vitest` configurado),
+así que el agrupado/estilos de catálogo y el contador del drawer no
+quedaron cubiertos por test automatizado — sólo por lectura de código y
+typecheck.
+
+**Problemas encontrados:** ninguno bloqueante. Se confirmó por lectura de
+`servicios.routes.ts` que `orden` no sale en la respuesta pública (ver
+arriba) — no contradice ninguna decisión cerrada, sólo aclara cómo se
+implementó el "orden por `orden`" pedido en el prompt de tarea (efecto
+equivalente sin que el campo viaje).
+
+**Verificación:** `npm run typecheck` limpio en los 4 workspaces. Suite
+completa: `shared` 10/10 verdes; `server` 149/149 verdes en archivo aislado
+del test nuevo (12/12 en `admin/servicios.routes.test.ts`) y 148/149 en la
+corrida de la suite completa — el único que falló
+(`auth.routes.test.ts`, rate limit de login, timeout 5000ms) es el mismo
+flake preexistente de contención de CPU ya documentado en la entrada
+2026-09-04 de esta bitácora, confirmado corriendo ese archivo solo (21/21
+verdes junto con `worker.test.ts`).

@@ -124,6 +124,21 @@ describe('POST /api/admin/servicios', () => {
     expect(res.status).toBe(201);
     expect(res.body.horarios).toBeNull();
   });
+
+  it('descripcion de 500 caracteres ⇒ ok; 501 ⇒ 400 (tope §15.7)', async () => {
+    await crearUsuario({ email: 'admin4b@test.com', rol: 'admin' });
+    const agente = await loguearAgente('admin4b@test.com');
+
+    const limite = await agente
+      .post('/api/admin/servicios')
+      .send(bodyServicioValido({ nombre: 'Servicio límite', descripcion: 'a'.repeat(500) }));
+    expect(limite.status).toBe(201);
+
+    const pasado = await agente
+      .post('/api/admin/servicios')
+      .send(bodyServicioValido({ nombre: 'Servicio pasado', descripcion: 'a'.repeat(501) }));
+    expect(pasado.status).toBe(400);
+  });
 });
 
 describe('GET /api/admin/servicios', () => {

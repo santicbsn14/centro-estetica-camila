@@ -161,7 +161,9 @@ export function ServicioDrawer({
           onChange={(e) => setDescripcion(e.target.value)}
           placeholder="Qué incluye el servicio"
           rows={3}
+          maxLength={500}
         />
+        <p className="servicio-drawer__contador">{descripcion.length}/500</p>
       </div>
 
       <div className="servicio-drawer__grid2">

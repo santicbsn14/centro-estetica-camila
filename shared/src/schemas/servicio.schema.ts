@@ -6,7 +6,7 @@ import { horariosServicioSchema } from './common.schema';
 // declarado acá a propósito, así un body manipulado no puede pisarlo.
 export const crearServicioSchema = z.object({
   nombre: z.string().min(2),
-  descripcion: z.string().optional(),
+  descripcion: z.string().max(500).optional(),
   duracionMin: z.number().int().positive(),
   bufferPostMin: z.number().int().min(0),
   precio: z.number().int().min(0), // centavos, entero (§3)
@@ -20,7 +20,7 @@ export type CrearServicioInput = z.infer<typeof crearServicioSchema>;
 // §15.7). Si viene `horarios`, reemplaza el array entero — sin merge por día.
 export const editarServicioSchema = z.object({
   nombre: z.string().min(2).optional(),
-  descripcion: z.string().optional(),
+  descripcion: z.string().max(500).optional(),
   duracionMin: z.number().int().positive().optional(),
   bufferPostMin: z.number().int().min(0).optional(),
   precio: z.number().int().min(0).optional(),
