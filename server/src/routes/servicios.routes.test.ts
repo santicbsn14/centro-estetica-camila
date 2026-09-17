@@ -72,6 +72,40 @@ describe('GET /api/servicios', () => {
     const facial = res.body.find((s: { nombre: string }) => s.nombre === 'Tratamiento facial');
     expect(facial).not.toHaveProperty('precio'); // mostrarPrecio: false
   });
+
+  it('imagenUrl: presente ⇒ viaja en la respuesta; ausente ⇒ no aparece la key', async () => {
+    await Servicio.create([
+      {
+        nombre: 'Con foto',
+        duracionMin: 30,
+        bufferPostMin: 0,
+        precio: 500000,
+        mostrarPrecio: true,
+        horarios: null,
+        orden: 0,
+        activo: true,
+        imagenUrl: 'https://cdn.example.com/foto.png',
+      },
+      {
+        nombre: 'Sin foto',
+        duracionMin: 30,
+        bufferPostMin: 0,
+        precio: 500000,
+        mostrarPrecio: true,
+        horarios: null,
+        orden: 1,
+        activo: true,
+      },
+    ]);
+
+    const res = await request(app).get('/api/servicios');
+
+    const conFoto = res.body.find((s: { nombre: string }) => s.nombre === 'Con foto');
+    expect(conFoto.imagenUrl).toBe('https://cdn.example.com/foto.png');
+
+    const sinFoto = res.body.find((s: { nombre: string }) => s.nombre === 'Sin foto');
+    expect(sinFoto).not.toHaveProperty('imagenUrl');
+  });
 });
 
 describe('GET /api/servicios/:id/profesionales', () => {

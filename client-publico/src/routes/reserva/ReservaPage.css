@@ -192,6 +192,25 @@ h1.title {
   margin-bottom: 10px;
   overflow: hidden;
 }
+/* Solo se renderiza si el servicio tiene `imagenUrl` (opcional, no todos la
+   tienen), y solo dentro del contenido expandido — no se monta en la card
+   colapsada, ni siquiera oculta (ver ServicioCard.tsx: el <img> no existe en
+   el DOM hasta que se abre el acordeón). Vive dentro de `.svc-body-in` (que
+   tiene padding lateral), por eso lleva su propio border-radius en vez de
+   heredar el de `.svc`. */
+.svc-img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.svc-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 .svc-hd {
   display: flex;
   align-items: center;
@@ -250,8 +269,12 @@ h1.title {
   overflow: hidden;
   transition: max-height 0.22s ease;
 }
+/* 640px en vez de los 320px originales: con la imagen del servicio sumada a
+   la lista de profesionales, el contenido expandido pasa el tope viejo y
+   queda recortado. Es solo un techo para la transición de max-height, no una
+   altura fija — no afecta a las cards sin imagen. */
 .svc.open .svc-body {
-  max-height: 320px;
+  max-height: 640px;
 }
 .svc-body-in {
   padding: 2px 16px 16px;

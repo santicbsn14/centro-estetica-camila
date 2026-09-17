@@ -139,6 +139,26 @@ describe('POST /api/admin/servicios', () => {
       .send(bodyServicioValido({ nombre: 'Servicio pasado', descripcion: 'a'.repeat(501) }));
     expect(pasado.status).toBe(400);
   });
+
+  it('imagenUrl: URL válida ⇒ ok; string que no es URL ⇒ 400; sin el campo ⇒ ok (retrocompat)', async () => {
+    await crearUsuario({ email: 'admin4c@test.com', rol: 'admin' });
+    const agente = await loguearAgente('admin4c@test.com');
+
+    const conImagen = await agente.post('/api/admin/servicios').send(
+      bodyServicioValido({ nombre: 'Con imagen', imagenUrl: 'https://cdn.example.com/foto.png' })
+    );
+    expect(conImagen.status).toBe(201);
+    expect(conImagen.body.imagenUrl).toBe('https://cdn.example.com/foto.png');
+
+    const invalida = await agente.post('/api/admin/servicios').send(
+      bodyServicioValido({ nombre: 'Imagen inválida', imagenUrl: 'no-es-una-url' })
+    );
+    expect(invalida.status).toBe(400);
+
+    const sinImagen = await agente.post('/api/admin/servicios').send(bodyServicioValido({ nombre: 'Sin imagen' }));
+    expect(sinImagen.status).toBe(201);
+    expect(sinImagen.body.imagenUrl).toBeUndefined();
+  });
 });
 
 describe('GET /api/admin/servicios', () => {
@@ -192,6 +212,30 @@ describe('PATCH /api/admin/servicios/:id', () => {
     expect(res.body.nombre).toBe('Pedicura');
     expect(res.body.duracionMin).toBe(60);
     expect(res.body.descripcion).toBe('Pedicura spa');
+  });
+
+  it('imagenUrl: "" ⇒ 400 (la decisión cerrada no soporta vaciarla vía PATCH); omitir el campo deja la imagen vieja intacta', async () => {
+    await crearUsuario({ email: 'admin7b@test.com', rol: 'admin' });
+    const servicio = await Servicio.create({
+      nombre: 'Lifting de pestañas',
+      duracionMin: 45,
+      bufferPostMin: 0,
+      precio: 400000,
+      mostrarPrecio: true,
+      horarios: null,
+      orden: 0,
+      activo: true,
+      imagenUrl: 'https://cdn.example.com/pestanas.png',
+    });
+
+    const agente = await loguearAgente('admin7b@test.com');
+
+    const conVacio = await agente.patch(`/api/admin/servicios/${servicio._id}`).send({ imagenUrl: '' });
+    expect(conVacio.status).toBe(400);
+
+    const sinElCampo = await agente.patch(`/api/admin/servicios/${servicio._id}`).send({ precio: 410000 });
+    expect(sinElCampo.status).toBe(200);
+    expect(sinElCampo.body.imagenUrl).toBe('https://cdn.example.com/pestanas.png');
   });
 
   it('horarios ⇒ reemplaza el array entero, no hace merge', async () => {

@@ -18,6 +18,7 @@ interface ServicioLean {
   mostrarPrecio: boolean;
   horarios: IHorarioDia[] | null;
   orden: number;
+  imagenUrl?: string;
   activo: boolean;
   creadoEn: Date;
   actualizadoEn: Date;
@@ -35,6 +36,7 @@ export interface ServicioPanel {
   mostrarPrecio: boolean;
   horarios: IHorarioDia[] | null;
   orden: number;
+  imagenUrl?: string;
   activo: boolean;
   creadoEn: string;
   actualizadoEn: string;
@@ -51,6 +53,7 @@ function mapServicioParaPanel(servicio: ServicioLean): ServicioPanel {
     mostrarPrecio: servicio.mostrarPrecio,
     horarios: servicio.horarios,
     orden: servicio.orden,
+    imagenUrl: servicio.imagenUrl,
     activo: servicio.activo,
     creadoEn: servicio.creadoEn.toISOString(),
     actualizadoEn: servicio.actualizadoEn.toISOString(),
@@ -68,6 +71,7 @@ export async function crearServicioPanel(input: CrearServicioInput): Promise<Ser
       mostrarPrecio: input.mostrarPrecio,
       horarios: input.horarios,
       orden: input.orden,
+      imagenUrl: input.imagenUrl,
       // activo: no viene del input (el schema no lo declara) — nace true por
       // default del modelo.
     });

@@ -13,6 +13,12 @@ export const crearServicioSchema = z.object({
   mostrarPrecio: z.boolean(),
   horarios: horariosServicioSchema, // nullable:true — null = hereda de la profesional (§10)
   orden: z.number().int(),
+  // Imagen de servicio — DECISIÓN CERRADA (modelo-datos-turnos.md §15.7):
+  // opcional y retrocompatible, URL externa pegada a mano (sin upload/
+  // procesamiento propio, sin publicId ni metadata). Sin soporte para
+  // vaciarla vía '' — no está en la decisión cerrada, y un PATCH que omite
+  // la key ya deja la imagen vieja intacta (semántica estándar de $set).
+  imagenUrl: z.string().url().optional(),
 });
 export type CrearServicioInput = z.infer<typeof crearServicioSchema>;
 
@@ -28,5 +34,6 @@ export const editarServicioSchema = z.object({
   horarios: horariosServicioSchema.optional(),
   orden: z.number().int().optional(),
   activo: z.boolean().optional(),
+  imagenUrl: z.string().url().optional(),
 });
 export type EditarServicioInput = z.infer<typeof editarServicioSchema>;

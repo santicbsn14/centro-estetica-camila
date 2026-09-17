@@ -10,6 +10,7 @@ export interface ServicioPublico {
   descripcion?: string;
   duracionMin: number;
   precio?: number; // ausente si !mostrarPrecio — nunca inventar un precio acá
+  imagenUrl?: string; // ausente si el servicio no tiene imagen cargada
 }
 
 export interface ProfesionalPublico {

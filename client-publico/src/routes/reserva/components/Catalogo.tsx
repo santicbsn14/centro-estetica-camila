@@ -1,7 +1,6 @@
-import { iniciales } from '../../../lib/iniciales';
-import { centavosAPesos } from '../../../lib/format/plata';
 import { CATEGORIAS_SERVICIO, CATEGORIA_FALLBACK, categoriaDe } from '../constants';
 import type { Carga, ProfesionalPublico, ServicioPublico } from '../types';
+import { ServicioCard } from './ServicioCard';
 
 interface Props {
   servicios: Carga<ServicioPublico[]>;
@@ -60,93 +59,17 @@ export function Catalogo({
       {categoriasConServicios.map((categoria) => (
         <div className="categoria" key={categoria}>
           <div className="categoria-titulo">{categoria}</div>
-          {buckets.get(categoria)!.map((servicio) => {
-            const abierto = servicioAbiertoId === servicio._id;
-            const profesionales = profesionalesPorServicio[servicio._id];
-
-            return (
-              <div className={`svc${abierto ? ' open' : ''}`} key={servicio._id}>
-                <div
-                  className="svc-hd"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => onToggleServicio(servicio)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onToggleServicio(servicio);
-                    }
-                  }}
-                  aria-expanded={abierto}
-                >
-                  <div className="info">
-                    <div className="n">{servicio.nombre}</div>
-                    {servicio.descripcion && <div className="d">{servicio.descripcion}</div>}
-                    <div className="meta">
-                      <span className="duracion num">{servicio.duracionMin} min</span>
-                      {servicio.precio !== undefined && (
-                        <>
-                          <span className="separador" aria-hidden="true">
-                            ·
-                          </span>
-                          <span className="precio num">{centavosAPesos(servicio.precio)}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <span className="chev" aria-hidden="true">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M6 9l6 6 6-6" />
-                    </svg>
-                  </span>
-                </div>
-                <div className="svc-body">
-                  <div className="svc-body-in">
-                    <div className="lbl">Elegí quién te atiende</div>
-                    <ListaProfesionales
-                      estado={profesionales}
-                      onElegir={(profesional) => onElegirProfesional(servicio, profesional)}
-                    />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {buckets.get(categoria)!.map((servicio) => (
+            <ServicioCard
+              key={servicio._id}
+              servicio={servicio}
+              abierto={servicioAbiertoId === servicio._id}
+              profesionales={profesionalesPorServicio[servicio._id]}
+              onToggle={onToggleServicio}
+              onElegirProfesional={onElegirProfesional}
+            />
+          ))}
         </div>
-      ))}
-    </div>
-  );
-}
-
-function ListaProfesionales({
-  estado,
-  onElegir,
-}: {
-  estado: Carga<ProfesionalPublico[]> | undefined;
-  onElegir: (profesional: ProfesionalPublico) => void;
-}) {
-  if (!estado || estado.tipo === 'cargando') {
-    return <p className="estado-carga estado-carga--sm">Cargando…</p>;
-  }
-  if (estado.tipo === 'error') {
-    return <p className="estado-carga estado-carga--sm">{estado.mensaje}</p>;
-  }
-  if (estado.datos.length === 0) {
-    return <p className="estado-carga estado-carga--sm">Nadie atiende este servicio por ahora.</p>;
-  }
-
-  return (
-    <div className="profs">
-      {estado.datos.map((profesional) => (
-        <button className="prof-btn" key={profesional._id} onClick={() => onElegir(profesional)}>
-          <span className="av">{iniciales(profesional.nombre)}</span>
-          <span className="nm">{profesional.nombre}</span>
-          <span className="go" aria-hidden="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 18l6-6-6-6" />
-            </svg>
-          </span>
-        </button>
       ))}
     </div>
   );

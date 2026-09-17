@@ -914,7 +914,7 @@ todavía en el primer insert de un test, dando falsos negativos en aserciones
 de unicidad. Fix en `dbTestSetup.ts`: `await Promise.all(...models.map(m =>
 m.init()))` tras conectar. Detalle en §11.
 
-**Estado: CRUD del panel COMPLETO. 149 tests server + 10 shared verdes,
+**Estado: CRUD del panel COMPLETO. 152 tests server + 10 shared verdes,
 typecheck limpio en el monorepo.**
 
 **Cerrado desde entonces:**
@@ -1479,6 +1479,31 @@ el tope a 500 caracteres, ahora explícito en el schema Zod compartido:
 Motivo de ponerle tope igual (no dejarlo abierto): el público consume este
 campo directo en el acordeón del catálogo (§15.3) — sin límite, una
 descripción larga rompe el layout de la card.
+
+
+### Imagen de servicio (`imagenUrl`) — DECISIÓN CERRADA
+
+Se agrega campo opcional a `servicios`:
+
+  imagenUrl: z.string().url().optional()
+
+en crearServicioSchema/editarServicioSchema (@shared) y en el modelo. Opcional
+y retrocompatible: los servicios existentes quedan sin imagen hasta que se
+cargue una desde el panel.
+
+Storage: URL externa (postimage u similar), pegada a mano en el panel. NO hay
+upload propio ni procesamiento de imagen — decisión de costo/simplicidad
+(fase 1). No se guarda publicId ni metadata: el día que se migre a Cloudinary,
+se resuben las fotos y se pegan las URLs nuevas, sin cambio de schema.
+
+Riesgos aceptados (documentados, no mitigados por infra):
+- Peso de archivo sin control (sin resize propio). Mitigado parcialmente porque
+  la imagen sólo se descarga al expandir el servicio (no todo el catálogo de una).
+- Persistencia/hotlink no garantizados (servicio externo tipo postimage no
+  pensado para uso comercial). Aceptado para fase 1.
+- Validación: `.url()` en Zod frena strings no-URL; el front maneja `onError`
+  del <img> para link roto (no rompe la card). No se valida que la URL sea
+  realmente una imagen viva.
 
 
 ### 15.8 CRUD administrativo — configuración (singleton)
@@ -3003,3 +3028,181 @@ corrida de la suite completa — el único que falló
 flake preexistente de contención de CPU ya documentado en la entrada
 2026-09-04 de esta bitácora, confirmado corriendo ese archivo solo (21/21
 verdes junto con `worker.test.ts`).
+
+### 2026-09-16 — Mock descartable `/preview-imagenes` en `client-publico`
+
+No es una implementación real, es un mock para que Santiago valide diseño con
+la clienta antes de decidir cómo se van a servir las imágenes de servicio en
+serio (Cloudinary + campo en el modelo, decisión pendiente en el chat de
+arquitectura). Esta entrada documenta que existe y por qué, para que nadie la
+confunda con trabajo terminado ni la deje viva por descuido.
+
+**Qué se hizo:**
+- Se extrajo la card de servicio del catálogo (antes inline dentro de
+  `Catalogo.tsx`) a su propio componente
+  `client-publico/src/routes/reserva/components/ServicioCard.tsx`, sin cambiar
+  markup, clases ni comportamiento — es un refactor puramente mecánico
+  (mover JSX + `ListaProfesionales` a un archivo nuevo). `Catalogo.tsx` ahora
+  la importa y la usa igual que antes.
+- Se le agregó a `ServicioCard` una prop opcional `imagenUrl?: string`: si
+  viene, renderiza un `<div className="svc-img"><img .../></div>` arriba del
+  header de la card. Si no viene (el catálogo real nunca la pasa), no
+  renderiza nada — el catálogo real queda pixel-igual a antes.
+- CSS nuevo en `ReservaPage.css`: `.svc-img` (contenedor `height: 140px`,
+  `img` con `object-fit: cover`). No se duplicó el `border-radius: 14px` de
+  `.svc` — como `.svc` ya tiene `overflow: hidden` y la imagen es el primer
+  hijo, el recorte de las esquinas superiores sale gratis del padre.
+- Página nueva `client-publico/src/routes/preview-imagenes/PreviewImagenesPage.tsx`,
+  con un array hardcodeado de 4 servicios de ejemplo (uno por categoría real:
+  UÑAS/CEJAS/PESTAÑAS/TRATAMIENTOS FACIALES) apuntando a
+  `/mock/{unas,cejas,pestanas,facial}.jpg`. **No sale de
+  `GET /api/servicios`** — es intencional, es solo para ver imágenes al lado
+  de la card real.
+- `App.tsx` gana un `if (window.location.pathname === '/preview-imagenes')`
+  antes del `return <ReservaPage />`. Sigue sin haber router de verdad (la
+  decisión de §4.10/§4.11 de una sola pantalla con pasos internos no cambia);
+  esto es un desvío puntual y marcado con comentario para borrar junto con
+  el resto del mock.
+- `client-publico/public/mock/` con un `LEEME.txt` (nombres de archivo
+  esperados) para que Santiago suelte ahí las imágenes que le paso la
+  clienta o él mismo.
+
+**Descartado a propósito:** no se agregó `react-router` (no estaba en
+`package.json` y una sola condición sobre `pathname` alcanza para algo que se
+borra en días); no se tocó `constants.ts` (categorías) ni el modelo de datos;
+no se generó ningún dato desde el server.
+
+**Por qué no es `⚠ REVISAR EN WEB`:** no contradice ninguna decisión cerrada
+de §1-16 — no toca el modelo, no persiste nada, no es un endpoint. El único
+código que sobrevive más allá del descarte es la extracción de `ServicioCard`
+(mejora de estructura sin cambio de comportamiento en el flujo real).
+
+**Archivos:**
+- `client-publico/src/routes/reserva/components/ServicioCard.tsx` (nuevo)
+- `client-publico/src/routes/reserva/components/Catalogo.tsx`
+- `client-publico/src/routes/reserva/ReservaPage.css`
+- `client-publico/src/routes/preview-imagenes/PreviewImagenesPage.tsx` (nuevo)
+- `client-publico/src/App.tsx`
+- `client-publico/public/mock/LEEME.txt` (nuevo)
+
+**Tests:** ninguno nuevo — es un mock visual sin lógica de negocio, y
+`client-publico` sigue sin infra de test (§14, sin cambios). El conteo de
+`server` (149) y `shared` (10) no se tocó porque este trabajo no pasó por ahí.
+
+**Verificación:** `npm run typecheck` limpio en los 4 workspaces. Suite
+completa: `shared` 10/10 verdes; `server` 149/149 verdes.
+
+**Para borrar cuando haya ok de diseño:** la carpeta
+`client-publico/src/routes/preview-imagenes/`, el `if` de `App.tsx`, y
+`client-publico/public/mock/`. `ServicioCard.tsx` se queda — es el componente
+real, no parte del mock.
+
+### 2026-09-17 — Imagen de servicio (`imagenUrl`): implementación real; borrado del mock `/preview-imagenes`
+
+Implementación real de la DECISIÓN CERRADA de §15.7 ("Imagen de servicio
+(`imagenUrl`)") y de las dos decisiones cerradas de `frontend.md` §4.11
+("Imagen de servicio en card del catálogo" + "visibilidad") y §4.5 ("Carga de
+imagen en CRUD de servicios"). El mock de la entrada anterior (2026-09-16)
+queda descartado por completo.
+
+**Qué se hizo:**
+- **`@shared`** (`schemas/servicio.schema.ts`): `imagenUrl: z.string().url().optional()`
+  agregado tal cual a `crearServicioSchema` y `editarServicioSchema` — sin
+  `.or(z.literal(''))`, ver "Problema encontrado" abajo.
+- **Modelo** (`server/src/models/servicio.model.ts`): campo `imagenUrl?: string`
+  sin `required`, sin default — retrocompatible, los servicios existentes
+  quedan sin imagen.
+- **Service CRUD** (`servicios.service.ts`): `imagenUrl` sumado a `ServicioLean`,
+  `ServicioPanel` y al mapper único (`mapServicioParaPanel`); `crearServicioPanel`
+  lo pasa al `Servicio.create`. `editarServicioPanel` no necesitó cambios — ya
+  hacía `$set: input` con el objeto entero, así que un `imagenUrl` en el body
+  del PATCH viaja solo.
+- **GET /api/servicios** (público, `servicios.routes.ts`): `imagenUrl` sumado
+  al `.select()` y a la respuesta mapeada, con el mismo patrón condicional que
+  `precio` (`...(s.imagenUrl ? { imagenUrl: s.imagenUrl } : {})`) — si no hay
+  imagen, la key ni aparece en el JSON.
+- **Panel — `ServicioDrawer.tsx`**: input de texto "Imagen" (nuevo estado
+  `imagenUrl`), con preview en vivo debajo (`.servicio-drawer__imagen-preview`,
+  16/9 + `object-fit: cover`, mismo recorte que el público). Si el campo está
+  vacío, no hay preview. Si el `<img>` del preview dispara `onError`, se
+  muestra "Imagen no válida" en vez del preview roto (`onLoad` limpia ese
+  estado si después se corrige la URL). El campo es opcional y su invalidez
+  de carga (`imagenInvalida`) NO bloquea el guardado — sólo lo bloquea que el
+  string no sea una URL válida (mismo mecanismo que el resto de los campos,
+  vía `crearServicioSchema`/`editarServicioSchema`).
+- **Client-publico — catálogo real**: la extracción de `ServicioCard.tsx` ya
+  existía (mock anterior); se le sacó la prop mock-only `imagenUrl?` y ahora
+  lee `servicio.imagenUrl` directo de `ServicioPublico` (sumado a
+  `routes/reserva/types.ts`). La imagen NO se muestra en la card colapsada:
+  vive dentro de `.svc-body-in`, junto al listado de profesionales, y el
+  `<img>` no se monta en el DOM hasta que `abierto` es `true` (nada de
+  `display:none` oculto — condicional de React real). `onError` del `<img>`
+  oculta el contenedor entero (estado local `imagenRota`) para que un link
+  roto no se vea en el catálogo público. CSS: `.svc-img` movido de "debajo del
+  header, ancho completo" a "dentro de `.svc-body-in`, con su propio
+  `border-radius`" (ya no hereda el del `.svc` padre porque `.svc-body-in`
+  tiene padding lateral). `.svc.open .svc-body` subió su `max-height` de
+  320px a 640px — con la imagen (16/9) sumada a la lista de profesionales, el
+  tope viejo recortaba el contenido expandido.
+- **Borrado del mock completo**: `client-publico/src/routes/preview-imagenes/`
+  (carpeta entera), `client-publico/public/mock/` (carpeta entera, incluidas
+  las dos fotos de ejemplo que Santiago había subido), y el `if
+  (window.location.pathname === '/preview-imagenes')` de `App.tsx`.
+  `ServicioCard.tsx` se queda — ya no es "el componente del mock", es el
+  componente real del catálogo.
+
+**Problema encontrado (autocorregido, no llegó a producción — no amerita
+`⚠ REVISAR EN WEB`):** en un primer paso implementé `imagenUrl` como
+`z.union([z.string().url(), z.literal('')]).optional()` en vez del
+`z.string().url().optional()` literal de la decisión cerrada, para poder
+"vaciar" una imagen ya cargada mandando `''` en el PATCH (mismo patrón que
+`descripcion`). Al releer §15.7 antes de cerrar la tarea noté que la decisión
+cerrada NO contempla esa vía de borrado — es opcional en un solo sentido
+("los servicios existentes quedan sin imagen hasta que se cargue una"). Revertí
+al schema exacto de la decisión cerrada y ajusté `ServicioDrawer` para mandar
+`imagenUrl: undefined` (no `''`) cuando el campo está vacío, así la key ni
+viaja en el JSON. Consecuencia real: **hoy no hay forma de quitarle la imagen
+a un servicio que ya tiene una cargada desde el panel** — sólo se puede
+reemplazar por otra URL. Si eso hace falta, es una decisión nueva para el chat
+de arquitectura (agregar soporte de `''` o un botón "quitar imagen" explícito
+en el drawer), no algo que haya que decidir acá.
+
+**Descartado a propósito:** upload propio / Cloudinary (la decisión cerrada
+lo pospone a fase 2, "el día que se migre... sin cambio de schema"); guardar
+`publicId` o cualquier metadata de la imagen; validar que la URL sea
+realmente una imagen viva (ni server ni client la descargan para chequear
+content-type, sólo formato de URL en el schema + `onError` del `<img>` en
+runtime); soporte de borrado de imagen vía `''` (ver arriba).
+
+**Archivos:**
+- `shared/src/schemas/servicio.schema.ts`
+- `server/src/models/servicio.model.ts`
+- `server/src/services/servicios.service.ts`
+- `server/src/routes/servicios.routes.ts`
+- `server/src/routes/servicios.routes.test.ts`
+- `server/src/routes/admin/servicios.routes.test.ts`
+- `client/src/routes/servicios/types.ts`
+- `client/src/routes/servicios/components/ServicioDrawer.tsx`
+- `client/src/routes/servicios/ServiciosPage.css`
+- `client-publico/src/routes/reserva/types.ts`
+- `client-publico/src/routes/reserva/components/ServicioCard.tsx`
+- `client-publico/src/routes/reserva/components/Catalogo.tsx` (sin cambios de
+  código — dejó de pasar la prop mock-only `imagenUrl`, que ya no existe)
+- `client-publico/src/routes/reserva/ReservaPage.css`
+- `client-publico/src/App.tsx`
+- Borrados: `client-publico/src/routes/preview-imagenes/` (carpeta),
+  `client-publico/public/mock/` (carpeta)
+
+**Tests:** 3 nuevos en `server` (152 = 149 + 3): `POST /api/admin/servicios`
+con `imagenUrl` válida/inválida/ausente; `PATCH /api/admin/servicios/:id` con
+`imagenUrl: ''` (ahora 400, documenta el límite de arriba) y con el campo
+omitido (deja la imagen vieja intacta); `GET /api/servicios` público expone
+`imagenUrl` sólo si está presente. `client`/`client-publico` siguen sin infra
+de test (§14, sin cambios) — cambios de UI verificados a mano (drawer con
+preview + error, acordeón con imagen sólo al expandir).
+
+**Verificación:** `npm run typecheck` limpio en los 4 workspaces. Suite
+completa: `shared` 10/10 verdes; `server` 152/152 verdes (un test de
+`auth.routes.test.ts` da flaky por timeout de 5s bajo contención de CPU al
+correr los 18 archivos en paralelo — no relacionado con este cambio, pasa
+siempre en corrida aislada).

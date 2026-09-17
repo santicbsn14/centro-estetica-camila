@@ -27,6 +27,7 @@ const MENSAJE_CAMPO: Record<string, string> = {
   bufferPostMin: 'Ingresá minutos de limpieza (podés poner 0).',
   precio: 'Ingresá un precio válido.',
   orden: 'Ingresá un número de orden.',
+  imagenUrl: 'Ingresá una URL válida (https://...).',
 };
 
 // Drawer de alta/edición (frontend.md §4.5). Sólo se monta mientras está
@@ -50,6 +51,8 @@ export function ServicioDrawer({
   const [mostrarPrecio, setMostrarPrecio] = useState(servicio?.mostrarPrecio ?? true);
   const [orden, setOrden] = useState(servicio ? String(servicio.orden) : String(serviciosExistentes.length));
   const [horarios, setHorarios] = useState<HorarioDia[] | null>(servicio?.horarios ?? null);
+  const [imagenUrl, setImagenUrl] = useState(servicio?.imagenUrl ?? '');
+  const [imagenInvalida, setImagenInvalida] = useState(false);
   const [errores, setErrores] = useState<Record<string, string>>({});
 
   const editorRef = useRef<EditorHorariosHandle>(null);
@@ -70,6 +73,11 @@ export function ServicioDrawer({
       mostrarPrecio,
       horarios,
       orden: Number(orden || '0'),
+      // A diferencia de descripcion: sin '' (la decisión cerrada de
+      // imagenUrl no soporta vaciarla, modelo-datos-turnos.md §15.7) —
+      // undefined si el campo está vacío, así el key ni viaja en el JSON y
+      // un PATCH no toca una imagen ya cargada.
+      imagenUrl: imagenUrl.trim() || undefined,
     };
 
     const nuevosErrores: Record<string, string> = {};
@@ -215,6 +223,36 @@ export function ServicioDrawer({
           onChange={setMostrarPrecio}
           label="Mostrar el precio en la web"
         />
+      </div>
+
+      <div className="servicio-drawer__campo">
+        <Input
+          label="Imagen"
+          value={imagenUrl}
+          onChange={(e) => {
+            setImagenUrl(e.target.value);
+            setImagenInvalida(false);
+          }}
+          placeholder="https://…"
+          error={errores.imagenUrl}
+        />
+        <p className="servicio-drawer__ayuda">
+          URL de la imagen. Opcional — el servicio se puede publicar sin foto.
+        </p>
+        {imagenUrl.trim() && (
+          <div className="servicio-drawer__imagen-preview">
+            {imagenInvalida ? (
+              <p className="servicio-drawer__imagen-error">Imagen no válida</p>
+            ) : (
+              <img
+                src={imagenUrl.trim()}
+                alt=""
+                onError={() => setImagenInvalida(true)}
+                onLoad={() => setImagenInvalida(false)}
+              />
+            )}
+          </div>
+        )}
       </div>
 
       <div className="servicio-drawer__campo">

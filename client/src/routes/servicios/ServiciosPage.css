@@ -197,6 +197,35 @@
   margin: 0.4rem 0 0;
 }
 
+/* Preview en vivo del campo Imagen — mismo recorte (16/9 + cover) que la
+   card pública, para que lo que ve la administradora acá sea lo que ve la
+   clienta en el catálogo. */
+.servicio-drawer__imagen-preview {
+  margin-top: 0.6rem;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--color-papel);
+  border: var(--borde-hairline);
+}
+.servicio-drawer__imagen-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.servicio-drawer__imagen-error {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  color: var(--color-error-texto);
+  margin: 0;
+}
+
 .servicio-drawer__label-horario {
   display: block;
   margin-bottom: 0.4rem;

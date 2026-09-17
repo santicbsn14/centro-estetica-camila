@@ -717,6 +717,36 @@ Rate limits a tener en cuenta (no bloquean UI, pero si el server devuelve 429 ha
 que mostrarlo, no fallar en silencio): POST /api/turnos 20/10min por IP;
 GET /disponibilidad 60/min; GET /servicios* 60/min (§14 backend).
 
+#### Imagen de servicio en card del catálogo (§4.11) — DECISIÓN CERRADA
+
+Contenedor de imagen en card de servicio (catálogo público): aspect-ratio
+16/9, object-fit: cover, object-position: center. Cualquier foto que
+Camila cargue se recorta a ese ratio — el layout nunca se rompe
+estructuralmente independientemente de las dimensiones originales.
+
+Riesgo aceptado (no mitigado técnicamente): mal encuadre si la foto
+original tiene un ratio muy distinto (ej. vertical), y peso de archivo sin
+control (consecuencia de la decisión de imagenUrl vía servicio externo
+tipo postimage, sin upload/procesamiento propio). Mitigación: preview en
+vivo en el panel (mismo aspect-ratio/object-fit que el público) para que
+Camila vea el recorte antes de guardar, + guía de uso con recomendación de
+formato/peso.
+
+
+#### Imagen de servicio — visibilidad (aclara el bloque anterior)
+
+La imagen del servicio NO se muestra en la card colapsada del catálogo —
+sólo aparece dentro del contenido expandido (mismo bloque donde se listan
+los profesionales que lo prestan), al tocar la card. El `<img>` se monta
+recién ahí, no antes — beneficio no buscado pero real: no se descargan las
+N imágenes de todo el catálogo al entrar, sólo la del servicio que el
+usuario abre.
+
+Contenedor con aspect-ratio 16/9 fijo (ya cerrado) desde el momento de
+expandir, para que la carga async de la imagen no corra el resto del
+contenido expandido.
+
+
 ### 4.13 Favicon + footer de contacto (client-publico, y favicon en client) — mockup cerrado
 
 **Favicon.** Reemplaza el favicon default de Vite en AMBAS apps (`client/` y
@@ -1312,6 +1342,15 @@ filtros/urgencia/drawer/transiciones contra una base vacía.
     §15.6).
 16. **Responsive:** angostar la ventana (~700px) — columnas de servicio y
     profesional se ocultan, el drawer pasa a ancho completo.
+
+#### Carga de imagen en CRUD de servicios (panel, §4.5) — DECISIÓN CERRADA
+
+En el drawer de alta/edición de servicio se agrega un campo de texto para
+`imagenUrl` (URL externa pegada a mano). Debajo del input, preview en vivo con
+el MISMO recorte que el catálogo público (aspect-ratio 16/9, object-fit: cover)
+— Camila ve cómo va a quedar el crop antes de guardar. Si la URL está vacía, no
+hay preview; si el <img> falla al cargar (onError), se muestra "imagen no
+válida" en vez del preview roto. Campo opcional, no bloquea el guardado.
 
 ### 2026-08-17 — Cotejo visual contra los 4 mockups (panel, tarea 4)
 

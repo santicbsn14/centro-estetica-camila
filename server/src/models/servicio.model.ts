@@ -10,6 +10,7 @@ export interface IServicio extends Document {
   mostrarPrecio: boolean;
   horarios: IHorarioDia[] | null; // null = hereda de la profesional
   orden: number;
+  imagenUrl?: string;
   activo: boolean;
   creadoEn: Date;
   actualizadoEn: Date;
@@ -34,6 +35,7 @@ const servicioSchema = new Schema<IServicio>(
       },
     },
     orden: { type: Number, required: true, default: 0 },
+    imagenUrl: { type: String },
     activo: { type: Boolean, required: true, default: true },
   },
   { timestamps: { createdAt: 'creadoEn', updatedAt: 'actualizadoEn' } }

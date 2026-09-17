@@ -33,7 +33,7 @@ export function crearServiciosRouter(): Router {
     try {
       const servicios = await Servicio.find({ activo: true })
         .sort({ orden: 1 })
-        .select('nombre descripcion duracionMin precio mostrarPrecio')
+        .select('nombre descripcion duracionMin precio mostrarPrecio imagenUrl')
         .lean();
 
       // Nunca horarios, buffer ni campos internos — sólo lo que la web muestra.
@@ -44,6 +44,7 @@ export function crearServiciosRouter(): Router {
           descripcion: s.descripcion,
           duracionMin: s.duracionMin,
           ...(s.mostrarPrecio ? { precio: s.precio } : {}),
+          ...(s.imagenUrl ? { imagenUrl: s.imagenUrl } : {}),
         }))
       );
     } catch (err) {

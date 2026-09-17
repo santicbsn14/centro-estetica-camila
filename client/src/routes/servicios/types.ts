@@ -16,6 +16,7 @@ export interface ServicioPanel {
   mostrarPrecio: boolean;
   horarios: HorarioDia[] | null; // null = hereda de la profesional (§4.5/§10)
   orden: number;
+  imagenUrl?: string;
   activo: boolean;
   creadoEn: string; // ISO UTC
   actualizadoEn: string; // ISO UTC
