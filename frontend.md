@@ -3564,3 +3564,83 @@ Levantar `npm run dev` desde la raíz, abrir la web pública
 4. Redimensionar la ventana cruzando los 460px con el flujo ya en paso 2+:
    el sello pasa de esquina a centrado (y viceversa) sin salto brusco ni
    overlap con el botón "volver".
+
+### 2026-09-19 — Fix: selector de profesional de NuevoTurnoDrawer excluía a la admin que atiende (§4.4)
+
+**Síntoma:** Camila (rol `admin`, `atiende:true`, `activo:true`, servicios y
+horarios cargados) no aparecía en el selector "Profesional" de "Nuevo turno".
+`GET /api/admin/usuarios` SÍ la devolvía — el dato llegaba bien al client y
+lo descartaba el filtro local.
+
+**Causa:** `NuevoTurnoDrawer.tsx` filtraba
+`u.rol === 'profesional' && u.activo && u.atiende` — patrón copiado de
+`ExcepcionesPage` sin revisar que acá la semántica es distinta. §4.4 pide
+"todas las usuarias activas con `atiende:true`" y el modelo (§4 usuarios,
+`atiende` separado de `rol`) existe justamente para que la dueña administre y
+atienda con un solo usuario. El server tampoco discrimina por rol: para
+`profesionalId` de un turno exige "existe, `activo:true` y `atiende:true`"
+(modelo §15.1), y en sesión admin no aplica ownership.
+
+**Fix (quirúrgico, una línea):** el filtro pasa a `u.activo && u.atiende`,
+sin mirar `rol`. Se actualizó el comentario que lo documenta.
+- Archivo: `client/src/routes/turnos/components/NuevoTurnoDrawer.tsx`.
+- La rama de sesión profesional NO cambia: sin selector, "Vos, {nombre}",
+  `profesionalId` fijo a `usuario.id` (no se tocó `esAdmin`, `profesionalId`
+  ni el JSX de esa rama).
+- `server/` no se tocó.
+
+**Sin contradicciones** contra §1–§16 — el fix alinea el client con §4.4 y
+con el modelo.
+
+**Hallazgos SIN corregir (decisión pendiente de Santiago):** el mismo filtro
+`rol === 'profesional'` vive en otros dos lugares del panel y deja a Camila
+fuera igual:
+1. `client/src/routes/excepciones/ExcepcionesPage.tsx:85` (`useMemo`
+   `profesionales`) — alimenta el select de alcance de `ExcepcionDrawer`
+   ("Una profesional") y el filtro de la lista. §4.8 dice "select (poblar
+   con listarUsuarios, reusar)" y NO menciona rol; en el modelo,
+   `profesionalId` de una excepción es referencia a usuario, sin restricción
+   de rol. Consecuencia hoy: Camila no puede cargar "mis vacaciones" / un
+   bloqueo sólo de su agenda (únicas opciones: "Todo el centro" o una
+   profesional que no es ella), y tampoco filtrar por ella. Ya existentes
+   con `profesionalId` de Camila se siguen resolviendo bien (el nombre sale
+   de `usuarios` sin filtrar). Recomendación: mismo criterio que acá
+   (`activo && atiende`); ojo que la lista de excepciones hoy muestra
+   inactivas con "(inactiva)", así que ahí habría que decidir si el criterio
+   es `atiende` solo o `activo && atiende` (el filtro de lista y el select
+   del drawer hoy comparten el mismo array). Comentario desactualizado en
+   `ExcepcionDrawer.tsx:17` ("ya filtrado a rol==='profesional'").
+2. `client/src/routes/turnos/api.ts:66` (`listarProfesionales`, filtro
+   "Todas las profesionales" de `TurnosPage`, §4.4) — ahora que Camila
+   puede recibir turnos desde "Nuevo turno", el admin no podrá filtrar la
+   lista por ella. Mismo criterio de fondo; ese filtro hoy no mira `atiende`
+   (sólo `rol` y muestra inactivas), así que el cambio no es un simple
+   copiar/pegar del de acá.
+
+**Verificación:** `npm run typecheck` limpio (los 4 workspaces). Suite:
+`shared` 10/10; `server` 150/152 en la corrida completa — los 2 fallos son
+timeouts de 5000ms en `auth.routes.test.ts` (hash argon2 con 18 archivos
+corriendo en paralelo), y el archivo pasa 14/14 corrido solo. Sin cambios de
+conteo (no se agregaron ni quitaron tests; `client` no tiene test runner —
+barra: typecheck + guión manual).
+
+**Guión de prueba manual:**
+
+`npm run dev` desde la raíz; abrir el panel (`http://localhost:5173`).
+
+1. **Admin con `atiende:true`** (Camila): Turnos → "Nuevo turno" → el
+   selector "Profesional" lista a Camila (junto con las profesionales
+   activas con `atiende:true`), ordenadas alfabéticamente.
+2. Elegir un servicio que Camila preste + Camila → aparece la grilla de
+   horarios; elegir un slot y "Crear turno" → 201, el turno nace
+   CONFIRMADO y aparece en la lista con Camila como profesional.
+3. **Admin con `atiende:false`**: Profesionales → editar a Camila → apagar
+   el switch "Toma turnos" → reabrir "Nuevo turno": ya NO aparece. Volver a
+   activarlo al terminar.
+4. **Usuaria inactiva** (`activo:false`, cualquier rol): no aparece.
+5. **Sesión profesional** (login con una profesional): "Nuevo turno" NO
+   muestra selector — dice "Vos, {su nombre}" y el turno se crea a su nombre
+   (regresión de la rama que no debía cambiar).
+6. **Estados del selector**: con la red en throttling ver "Cargando
+   profesionales…"; bloqueando `/api/admin/usuarios` en devtools, ver el
+   mensaje de error en vez del select (sin romper el resto del drawer).

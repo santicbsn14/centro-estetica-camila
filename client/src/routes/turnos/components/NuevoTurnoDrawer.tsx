@@ -74,7 +74,9 @@ export function NuevoTurnoDrawer({ guardando, onCrear, onCerrar }: NuevoTurnoDra
 
   // Profesionales activas — sólo admin, reusa listarUsuarios (frontend.md
   // §4.4: "reusar listarUsuarios ya existente"). Filtro cliente: activo +
-  // atiende (§15.9 no expone un query param para esto).
+  // atiende, SIN mirar rol (modelo §4: la dueña administra y atiende con un
+  // solo usuario 'admin', tiene que poder aparecer acá igual que cualquier
+  // 'profesional'). §15.9 no expone un query param para esto.
   const [profesionales, setProfesionales] = useState<UsuarioPanel[]>([]);
   const [cargandoProfesionales, setCargandoProfesionales] = useState(esAdmin);
   const [errorProfesionales, setErrorProfesionales] = useState<string | null>(null);
@@ -120,7 +122,7 @@ export function NuevoTurnoDrawer({ guardando, onCrear, onCerrar }: NuevoTurnoDra
         if (!vivo) return;
         setProfesionales(
           usuarios
-            .filter((u) => u.rol === 'profesional' && u.activo && u.atiende)
+            .filter((u) => u.activo && u.atiende)
             .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
         );
       })
