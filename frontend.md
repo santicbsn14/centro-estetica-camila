@@ -245,7 +245,7 @@ Dos SPA separadas, no una con routing:
 - `client/` (ya existe en el monorepo, Vite+React+TS, alias @shared) = **panel**.
 - Web pública = app aparte, se agrega cuando lleguemos a ella (fase pública).
 
-Motivo: distinto origen de deploy (panel.camigonzalez.com vs camigonzalez.com,
+Motivo: distinto origen de deploy (panel.camilagonzalezbelleza.com vs camilagonzalezbelleza.com,
 §4.2), distinto cliente HTTP (panel con credentials+CSRF; pública plana), distinta
 superficie de auth (panel detrás de login; pública sin sesión). Bundles y
 concerns separados. Comparten `shared/` (Zod) y, si conviene, una capa mínima de
@@ -617,7 +617,7 @@ Nunca passwordHash. Shape espejado en types.ts si no está en @shared.
 
 Segunda SPA del monorepo (cierra §4.2.1): Vite+React+TS, alias @shared, hermana de
 client/ (ej. client-publico/ o public/ — Claude Code decide el nombre según
-convención del repo). Deploy en camigonzalez.com (§4.2), sin login.
+convención del repo). Deploy en camilagonzalezbelleza.com (§4.2), sin login.
 
 Diferencias del panel, explícitas para que no se copien por inercia:
 - SIN AuthProvider, SIN guards de sesión/rol, SIN router de login. Es anónima.
@@ -3920,3 +3920,119 @@ en 30 para ver el rango completo):
    del día: vuelve a la vista default y ese día queda gris en el calendario.
 9. **Zona horaria:** con el dispositivo en otra zona (p. ej. cambiar la zona del
    sistema) "hoy" en el calendario sigue siendo la fecha de Argentina.
+
+### 2026-09-21 — Preview de link (Open Graph) + íconos opacos — DECISIÓN CERRADA (ajusta §4.13 y la entrada del 2026-09-01)
+
+**Problema:** `client-publico/index.html` declara `og:title/description/type/
+locale` pero no `og:image`, `og:url` ni `twitter:card`. Sin imagen declarada,
+las plataformas improvisan (típicamente el `apple-touch-icon` o el ícono más
+grande, chico o recortado). Además §4.13 describe los íconos como "sobre
+fondo transparente": el apple-touch transparente se pinta sobre negro en iOS
+y en pestañas de tema oscuro el glifo desaparece (mismo motivo por el que el
+2026-09-01 se había elegido el disco invertido).
+
+**Decisión**
+1. `og-image.png` 1200×630 en `client-publico/public/`. Fondo `--color-papel`
+   (#f8f7fb) sólido, sello real (`logo_lg.png`) centrado, alto ≈ 400px, SIN
+   texto extra (el nombre ya está en el sello y en `og:title`). Las
+   plataformas recortan distinto (1.91:1 FB/WhatsApp, 2:1 X, ~1:1 en listas y
+   miniaturas): todo lo importante entra en el cuadrado central de 630×630
+   con ≥115px de aire, así ningún recorte corta el sello. Peso objetivo
+   < 300 KB (WhatsApp puede ignorar imágenes más pesadas).
+2. Meta tags NUEVOS en `client-publico/index.html`:
+   `og:image` = `https://camilagonzalezbelleza.com/og-image.png`,
+   `og:image:width` 1200, `og:image:height` 630, `og:image:alt`
+   ("Camila González · Salón de belleza", igual que el sello),
+   `og:url` = `https://camilagonzalezbelleza.com/`, `og:site_name`
+   ("Camila González Belleza"), `twitter:card` = `summary_large_image`.
+   `og:title/description/type/locale`, meta description y noscript NO se
+   tocan: están alineados con el perfil de Twilio (2026-09-01).
+3. Íconos opacos: 180 / 192 / 512 ⇒ cuadrado full-bleed, fondo tinta
+   (#151515) opaco, glifo cg+corazón en papel ocupando ~60% central (iOS y
+   Android aplican su propia máscara). 16 / 32 / 48 y `.ico` ⇒ disco tinta
+   con glifo papel (tratamiento del lockup), legible en pestaña clara y
+   oscura. Mismo set en `client/` y `client-publico/` (§4.13: mismo asset).
+   Si los PNG actuales ya son opacos, no se regeneran.
+4. Dominio de producción de la web pública: `camilagonzalezbelleza.com`
+   (definitivo, confirmado por Santiago).
+
+**Descartado:** texto en la imagen (tagline/ciudad): se lee mal en
+miniatura y duplica `og:title/description`. Foto del local: no hay material
+aprobado, fase 2 si Camila la quiere.
+
+**Riesgo:** cada plataforma cachea el preview del link; tras el deploy puede
+seguir mostrando el viejo un tiempo. Para probar: compartir el link con
+`?v=2`, o forzar re-scrape (Facebook Sharing Debugger, @WebpageBot en
+Telegram). Verificar que `/og-image.png` responde 200 público con
+`content-type: image/png` en Hostinger.
+
+### 2026-09-21 — Implementación: preview de link (Open Graph) + íconos opacos
+
+Implementa la entrada "Preview de link (Open Graph) + íconos opacos". Sin
+contradicciones con §1–16 ni con el resto de este archivo.
+
+**Archivos tocados**
+- `client-publico/index.html`: 7 meta nuevos (`og:url`, `og:site_name`,
+  `og:image`, `og:image:width` 1200, `og:image:height` 630, `og:image:alt`,
+  `twitter:card`), agrupados tras `og:locale`.
+- `client-publico/public/og-image.png` — NUEVO.
+- Íconos regenerados, mismo set byte a byte en `client-publico/public/` y
+  `client/public/`: `favicon-16/32/48/180/192/512.png` + `favicon.ico`.
+
+**NO se tocó:** `og:title/description/type/locale`, meta description,
+`<noscript>`, los `<link rel="icon">` (los nombres de archivo no cambian, así
+que tampoco `client/index.html`), `server/`, `shared/`, `src/` de ninguna app.
+`client/index.html` (panel) sin `og:*`, como pedía la entrada. Sin cambios en
+`package.json` ni lockfile (no se agregó ninguna dependencia al repo).
+
+**Inspección previa de íconos: NO eran opacos, hubo que regenerarlos.** Los 6
+PNG eran RGBA con esquina alfa=0 y 47 % (16px) a 87 % (512px) de píxeles
+totalmente transparentes; el `.ico` traía 3 PNG 32bpp (16/32/48) también
+transparentes.
+
+**Cómo se regeneraron los íconos** (script descartable, no commiteado)
+- Se usó el alfa del `favicon-512.png` anterior como máscara del glifo
+  (recolor a `#f8f7fb`, mismo glifo, sólo cambia el fondo); se recortó al bbox
+  del alfa (458×412 px dentro del 512) y se reescaló con Lanczos3.
+- **Master cuadrado 512:** fondo `#151515` full-bleed, RGB sin canal alfa, glifo
+  papel al 60 % del ancho (307×276), centrado por bbox. 192 y 180 derivan de
+  ese master con Lanczos3. Verificado: 3 canales, sin alfa.
+- **Master disco 512:** disco `#151515` de diámetro = lienzo (esquinas
+  transparentes, borde antialias), glifo papel al 68 % del diámetro. 48/32/16
+  derivan de ese master con Lanczos3. `favicon.ico` = 3 PNG embebidos
+  (16/32/48) armados a mano, misma estructura que el anterior.
+- Revisado en una hoja de contacto sobre fondo claro (`#fff`) y oscuro
+  (`#202124`): el glifo se lee en ambos; en pestaña oscura el disco casi se
+  funde con el fondo pero el glifo papel se mantiene legible.
+- Pesos: 512 = 24 KB (antes 45), 192 = 8 KB, 180 = 7 KB, `.ico` = 4.8 KB.
+
+**Cómo se generó `og-image.png`** (script descartable, no commiteado)
+`sharp` 0.35 instalado en un directorio temporal FUERA del repo (`npm install
+sharp` en el scratchpad), así que no toca `package.json` ni el bundle.
+`logo_lg.png` (800×808 RGBA) → `resize({height:400}, lanczos3)` ⇒ 396×400;
+compuesto centrado sobre lienzo 1200×630 sólido `#f8f7fb`; salida PNG RGB sin
+alfa, compresión 9. Sin texto. **Peso: 46 998 bytes (~46 KB)**, muy por debajo
+de los 300 KB.
+
+**Simulación de recortes** (sello en x 402–798, y 115–515 sobre el 1200×630):
+- Cuadrado central 630×630 (`x 285–915`): sello completo, ≥115 px de aire
+  arriba/abajo y ≥117 px a los lados.
+- 2:1 1200×600 (recorte de 15 px arriba/abajo): sello completo, ≥100 px de aire
+  arriba/abajo.
+Ambos revisados a ojo abriendo las imágenes recortadas.
+
+**Verificación**
+- `npm run build` en `client-publico` y en `client`: ambos limpios
+  (`tsc --noEmit` + `vite build`). El warning de chunk >500 kB del panel ya
+  existía. No hubo cambios de código en TS, así que no se re-corrió la suite de
+  tests ni el typecheck de `server`/`shared` (fuera de alcance).
+- `client-publico/dist/` contiene `og-image.png` y los 7 íconos (mismos bytes
+  que `public/`); `dist/index.html` trae los 7 meta nuevos. `client/dist/`
+  contiene los 7 íconos y ningún `og:*`.
+- `client-publico/public/.htaccess` sirve archivos reales antes del fallback a
+  `index.html`, así que `/og-image.png` no cae en el SPA.
+
+**Pendiente (post-deploy, no verificable acá):** `https://camilagonzalezbelleza.com/og-image.png`
+responde 200 con `content-type: image/png` en Hostinger, y probar el preview con
+`?v=2` / Facebook Sharing Debugger por el caché de las plataformas (ver
+"Riesgo" de la entrada de decisión).
