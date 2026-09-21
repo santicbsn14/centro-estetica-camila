@@ -2,10 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import type { CrearTurnoInput } from '@shared/schemas/turno.schema';
 import { HttpError } from '../../lib/http';
 import { mensajeDeError } from '../../lib/errores';
-import { rangoSemanaUtc, claveDiaLocal } from '../../lib/format/fecha';
+import {
+  DIAS_CALENDARIO,
+  claveDiaLocal,
+  diasConSlots,
+  rangoDisponibilidadUtc,
+} from '../../lib/format/fecha';
 import { listarServicios, listarProfesionales, listarDisponibilidad, crearTurno } from './api';
 import { Catalogo } from './components/Catalogo';
 import { Grilla } from './components/Grilla';
+import { Calendario } from './components/Calendario';
 import { HojaDatos } from './components/HojaDatos';
 import { Exito } from './components/Exito';
 import { Footer } from './components/Footer';
@@ -30,6 +36,10 @@ export function ReservaPage() {
   // vuelve a pedir GET /api/servicios ni los profesionales ya cargados.
   const [servicios, setServicios] = useState<Carga<ServicioPublico[]>>({ tipo: 'cargando' });
   const [servicioAbiertoId, setServicioAbiertoId] = useState<string | null>(null);
+  // Categorías desplegadas (frontend.md 2026-09-21): todas cerradas al entrar,
+  // independientes entre sí. Vive acá, no en Catalogo, para que "Cambiar"
+  // desde el paso 2 vuelva con categoría y servicio elegidos todavía abiertos.
+  const [categoriasAbiertas, setCategoriasAbiertas] = useState<ReadonlySet<string>>(() => new Set());
   const [profesionalesPorServicio, setProfesionalesPorServicio] = useState<
     Record<string, Carga<ProfesionalPublico[]>>
   >({});
@@ -39,8 +49,17 @@ export function ReservaPage() {
   const [servicioElegido, setServicioElegido] = useState<ServicioPublico | null>(null);
   const [profesionalElegido, setProfesionalElegido] = useState<ProfesionalPublico | null>(null);
 
-  // Paso 2 — grilla de la semana visible.
+  // Paso 2 — TODOS los slots de hoy…hoy+DIAS_CALENDARIO en un único GET
+  // (frontend.md 2026-09-21). Es el cache en memoria de UN solo par
+  // servicioId:profesionalId (`claveDisponibilidad`): cambiar servicio o
+  // profesional lo descarta. Sin TTL — un slot ocupado mientras la clienta
+  // mira lo cubre el 409 del POST.
   const [slots, setSlots] = useState<Carga<Slot[]>>({ tipo: 'cargando' });
+  const claveDisponibilidad = useRef<string | null>(null);
+  // Día elegido en el calendario (yyyy-MM-dd local); null = vista default.
+  const [diaElegido, setDiaElegido] = useState<string | null>(null);
+  const [calendarioAbierto, setCalendarioAbierto] = useState(false);
+  const disparadorCalendario = useRef<Element | null>(null);
 
   // Sheet de datos (overlay del paso 2).
   const [sheetAbierto, setSheetAbierto] = useState(false);
@@ -68,13 +87,14 @@ export function ReservaPage() {
 
   useEffect(() => () => clearTimeout(toastTimer.current), []);
 
-  // Scroll-lock del fondo mientras el sheet está abierto (mockup v2:
-  // body.locked). El cleanup lo saca al cerrar o al desmontar.
+  // Scroll-lock del fondo mientras algún sheet (datos o calendario) está
+  // abierto (mockup v2: body.locked). El cleanup lo saca al cerrar o al
+  // desmontar.
   useEffect(() => {
-    if (!sheetAbierto) return;
+    if (!sheetAbierto && !calendarioAbierto) return;
     document.body.classList.add('sheet-abierta');
     return () => document.body.classList.remove('sheet-abierta');
-  }, [sheetAbierto]);
+  }, [sheetAbierto, calendarioAbierto]);
 
   // --- Carga inicial del catálogo (una sola vez) ---
   useEffect(() => {
@@ -97,6 +117,15 @@ export function ReservaPage() {
   }
 
   // --- Paso 1: acordeón ---
+  function toggleCategoria(categoria: string) {
+    setCategoriasAbiertas((prev) => {
+      const siguiente = new Set(prev);
+      if (siguiente.has(categoria)) siguiente.delete(categoria);
+      else siguiente.add(categoria);
+      return siguiente;
+    });
+  }
+
   function toggleServicio(servicio: ServicioPublico) {
     const abrir = servicioAbiertoId !== servicio._id;
     setServicioAbiertoId(abrir ? servicio._id : null);
@@ -121,16 +150,51 @@ export function ReservaPage() {
     setServicioElegido(servicio);
     setProfesionalElegido(profesional);
     setPaso(2);
+
+    // Mismo par ya cargado (ej. "Cambiar" y volver a elegir lo mismo): se
+    // reusa el cache, sin otro GET y conservando el día elegido. Cualquier
+    // otro par lo invalida y resetea la fecha.
+    if (claveDisponibilidad.current === `${servicio._id}:${profesional._id}` && slots.tipo === 'ok') return;
+    setDiaElegido(null);
     cargarDisponibilidad(servicio._id, profesional._id);
   }
 
   // --- Paso 2: grilla ---
   function cargarDisponibilidad(servicioId: string, profesionalId: string) {
+    const clave = `${servicioId}:${profesionalId}`;
+    claveDisponibilidad.current = clave;
     setSlots({ tipo: 'cargando' });
-    const { desde, hasta } = rangoSemanaUtc();
+    // Un único GET con hasta = hoy+DIAS_CALENDARIO; la vista de 7 días, el
+    // calendario y "un solo día" leen del mismo array.
+    const { desde, hasta } = rangoDisponibilidadUtc(DIAS_CALENDARIO);
+    // Si mientras tanto se eligió otro par, la respuesta vieja se descarta.
     listarDisponibilidad({ servicioId, profesionalId, desde, hasta })
-      .then((res) => setSlots({ tipo: 'ok', datos: res.slots }))
-      .catch((err) => setSlots({ tipo: 'error', mensaje: mensajeDeError(err) }));
+      .then((res) => {
+        if (claveDisponibilidad.current === clave) setSlots({ tipo: 'ok', datos: res.slots });
+      })
+      .catch((err) => {
+        if (claveDisponibilidad.current === clave) setSlots({ tipo: 'error', mensaje: mensajeDeError(err) });
+      });
+  }
+
+  function abrirCalendario() {
+    disparadorCalendario.current = document.activeElement;
+    setCalendarioAbierto(true);
+  }
+
+  function cerrarCalendario() {
+    setCalendarioAbierto(false);
+    if (disparadorCalendario.current instanceof HTMLElement) disparadorCalendario.current.focus();
+  }
+
+  function elegirDia(clave: string) {
+    setDiaElegido(clave);
+    cerrarCalendario();
+  }
+
+  function cerrarSheetsAbiertos() {
+    if (calendarioAbierto) cerrarCalendario();
+    if (sheetAbierto) cerrarSheet();
   }
 
   function reintentarDisponibilidad() {
@@ -178,18 +242,26 @@ export function ReservaPage() {
   // el submit del paso 3, no al tocar el slot). Cierra el sheet, avisa, y
   // vuelve al paso 2 re-renderizado desde detalle.slots — SIN otro GET. El
   // 409 sólo trae la grilla actualizada del DÍA que se ocupó; se reemplazan
-  // sólo los slots de ese día local, el resto de los días conserva lo ya
-  // cargado. servicio/profesional elegidos NO se pierden (siguen en estado).
+  // sólo los slots de ese día local del cache de 30 días, el resto conserva
+  // lo ya cargado. Si el día queda vacío se deshabilita solo en el calendario
+  // (los días habilitados se derivan de los slots); y si era el día elegido,
+  // se vuelve a la vista default — no hay estado vacío por día elegido.
+  // servicio/profesional elegidos NO se pierden (siguen en estado).
   function manejarSlotOcupado(err: HttpError) {
     const detalle = err.detalle as { slots?: Slot[] } | undefined;
     const slotsDelDia = detalle?.slots ?? [];
 
-    setSlots((prev) => {
-      if (prev.tipo !== 'ok' || !slotElegido) return { tipo: 'ok', datos: slotsDelDia };
+    if (slotElegido) {
       const diaOcupado = claveDiaLocal(slotElegido.inicio);
-      const otrosDias = prev.datos.filter((s) => claveDiaLocal(s.inicio) !== diaOcupado);
-      return { tipo: 'ok', datos: [...otrosDias, ...slotsDelDia] };
-    });
+      setSlots((prev) => {
+        if (prev.tipo !== 'ok') return prev;
+        const otrosDias = prev.datos.filter((s) => claveDiaLocal(s.inicio) !== diaOcupado);
+        return { tipo: 'ok', datos: [...otrosDias, ...slotsDelDia] };
+      });
+      if (slotsDelDia.length === 0) {
+        setDiaElegido((actual) => (actual === diaOcupado ? null : actual));
+      }
+    }
 
     setSheetAbierto(false);
     setSlotElegido(null);
@@ -229,8 +301,10 @@ export function ReservaPage() {
             </div>
             <Catalogo
               servicios={servicios}
+              categoriasAbiertas={categoriasAbiertas}
               servicioAbiertoId={servicioAbiertoId}
               profesionalesPorServicio={profesionalesPorServicio}
+              onToggleCategoria={toggleCategoria}
               onToggleServicio={toggleServicio}
               onElegirProfesional={elegirProfesional}
               onReintentar={cargarServicios}
@@ -243,9 +317,12 @@ export function ReservaPage() {
             servicio={servicioElegido}
             profesional={profesionalElegido}
             slots={slots}
+            diaElegido={diaElegido}
             onCambiar={volverAlCatalogo}
             onElegirSlot={elegirSlot}
             onReintentar={reintentarDisponibilidad}
+            onAbrirCalendario={abrirCalendario}
+            onVerProximos={() => setDiaElegido(null)}
           />
         )}
 
@@ -258,7 +335,26 @@ export function ReservaPage() {
           grilla/form/éxito — frontend.md §4.13. */}
       {paso === 1 && <Footer />}
 
-      <div className={`scrim${sheetAbierto ? ' scrim--open' : ''}`} onClick={cerrarSheet} />
+      <div
+        className={`scrim${sheetAbierto || calendarioAbierto ? ' scrim--open' : ''}`}
+        onClick={cerrarSheetsAbiertos}
+      />
+      <aside
+        className={`sheet${calendarioAbierto ? ' sheet--open' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Elegir fecha"
+        aria-hidden={!calendarioAbierto}
+      >
+        {calendarioAbierto && slots.tipo === 'ok' && (
+          <Calendario
+            diasConSlots={diasConSlots(slots.datos)}
+            diaElegido={diaElegido}
+            onElegir={elegirDia}
+            onCerrar={cerrarCalendario}
+          />
+        )}
+      </aside>
       <aside className={`sheet${sheetAbierto ? ' sheet--open' : ''}`}>
         {sheetAbierto && slotElegido && servicioElegido && profesionalElegido && (
           <HojaDatos

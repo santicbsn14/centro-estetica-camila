@@ -169,20 +169,97 @@ h1.title {
   margin: 0 0 12px;
 }
 
-/* Catálogo acordeón — agrupado por categoría (frontend.md §4.11 punto 3a) */
+/* Catálogo — categorías desplegables (frontend.md 2026-09-21, amplía §4.11
+   punto 3a). Fila plana con separadores, sin card: los servicios de adentro
+   ya son cards. Todas cerradas al entrar, independientes entre sí. */
+.catalogo {
+  border-top: 0.5px solid var(--color-linea-fuerte);
+}
 .categoria {
-  margin-bottom: 4px;
+  border-bottom: 0.5px solid var(--color-linea-fuerte);
 }
-.categoria-titulo {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--color-tinta-48);
+.categoria-h {
+  font-family: var(--fuente-ui);
+  font-size: inherit;
+  font-weight: inherit;
+}
+/* <button> nativo NO hereda color: va explícito, si no queda el gris de
+   sistema. Conteo y chevron en tinta-72 (tinta-48 sobre papel da ~3.9:1, bajo
+   AA). */
+.categoria-hd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 2px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-tinta);
+}
+.categoria-hd:focus-visible {
+  outline: 2px solid var(--color-tinta);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.categoria-nombre {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin: 20px 2px 10px;
+  color: var(--color-tinta);
 }
-.categoria:first-child .categoria-titulo {
-  margin-top: 0;
+.categoria-cuenta {
+  font-size: 12px;
+  color: var(--color-tinta-72);
+  flex: none;
+}
+.categoria-chev {
+  flex: none;
+  color: var(--color-tinta-72);
+  transition: transform 0.22s ease;
+}
+.categoria--abierta .categoria-chev {
+  transform: rotate(180deg);
+}
+/* grid-template-rows 0fr → 1fr en vez de max-height: un tope fijo recortaría
+   el acordeón anidado (servicio → imagen → profesionales). Cerrado:
+   visibility:hidden (con delay igual a la transición) saca el contenido del
+   orden de tab y del árbol de accesibilidad recién cuando terminó de
+   colapsar. */
+.categoria-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition:
+    grid-template-rows 0.26s ease,
+    visibility 0s linear 0.26s;
+}
+.categoria--abierta .categoria-panel {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition:
+    grid-template-rows 0.26s ease,
+    visibility 0s;
+}
+/* El clip (overflow:hidden + min-height:0) va en este nivel y el padding
+   vertical un nivel más adentro: con padding acá la fila no colapsaría a 0.
+   El padding/margen lateral de 4px sólo deja espacio para los outlines de
+   foco de los servicios sin correr el alineado con el header. */
+.categoria-panel-in {
+  min-height: 0;
+  overflow: hidden;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+.categoria-panel-body {
+  padding: 2px 0 12px;
+}
+.categoria-panel-body .svc:last-child {
+  margin-bottom: 0;
 }
 
 .svc {
@@ -413,6 +490,164 @@ h1.title {
   text-align: center;
   color: var(--color-tinta-48);
   font-size: 13px;
+}
+
+/* "Elegir fecha" (frontend.md 2026-09-21): botón a la derecha del título del
+   paso 2, banner del día elegido y calendario del bottom sheet. */
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 2px 0 12px;
+}
+.title-row h1.title {
+  margin: 0;
+}
+.fecha-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-tinta);
+  background: var(--color-blanco);
+  border: var(--borde-hairline-fuerte);
+  border-radius: var(--radio-control);
+  padding: 7px 11px;
+  cursor: pointer;
+}
+.fecha-btn:hover {
+  border-color: var(--color-tinta);
+}
+.dia-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-blanco);
+  border: var(--borde-hairline);
+  border-radius: 11px;
+  padding: 10px 13px;
+  margin-bottom: 16px;
+  font-size: 12.5px;
+  color: var(--color-tinta-72);
+}
+.dia-banner b {
+  color: var(--color-tinta);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.dia-banner__volver {
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-tinta-72);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cal-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cal-hd h2 {
+  margin: 0;
+}
+.cal-cerrar,
+.cal-nav-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: var(--borde-hairline-fuerte);
+  background: var(--color-blanco);
+  color: var(--color-tinta);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  flex: none;
+}
+.cal-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.cal-mes {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.cal-semana {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-tinta-72);
+  padding: 2px 0 4px;
+}
+.cal-dia {
+  /* tinta-30 sólo existe en mockups/footer-camila.html, no en tokens.css (§3
+     cerrado): se declara acá, local al calendario, en vez de sumar un token. */
+  --cal-tinta-30: #a9a8b0;
+  aspect-ratio: 1;
+  width: 100%;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-tinta);
+  background: var(--color-papel);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.cal-dia:hover:not(:disabled) {
+  border-color: var(--color-tinta);
+}
+.cal-dia--hoy {
+  border-color: var(--color-tinta);
+}
+.cal-dia--elegido {
+  background: var(--color-tinta);
+  color: var(--color-papel);
+  border-color: var(--color-tinta);
+}
+.cal-dia:disabled {
+  color: var(--cal-tinta-30);
+  background: none;
+  opacity: 0.4;
+  cursor: default;
+}
+.cal-cerrar:focus-visible,
+.cal-nav-btn:focus-visible,
+.cal-dia:focus-visible,
+.fecha-btn:focus-visible,
+.dia-banner__volver:focus-visible {
+  outline: 2px solid var(--color-tinta);
+  outline-offset: 2px;
+}
+.cal-leyenda {
+  font-size: 11.5px;
+  color: var(--color-tinta-72);
+  text-align: center;
+  margin: 16px 0 6px;
 }
 
 /* Bottom sheet — FIX (mockup v2 §4.11): position:fixed anclado al viewport

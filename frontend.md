@@ -3644,3 +3644,279 @@ barra: typecheck + guión manual).
 6. **Estados del selector**: con la red en throttling ver "Cargando
    profesionales…"; bloqueando `/api/admin/usuarios` en devtools, ver el
    mensaje de error en vez del select (sin romper el resto del drawer).
+### 2026-09-21 — Catálogo público: categorías desplegables — DECISIÓN CERRADA
+(amplía "Categorización visual de servicios en catálogo público")
+
+Pedido de Camila: cada categoría (UÑAS, CEJAS, PESTAÑAS, TRATAMIENTOS
+FACIALES, MASAJES) es un desplegable; al entrar no se ve ningún servicio.
+Mock validado por Camila.
+
+**No se reabre:** agrupación sólo de presentación, mapeo `nombre → categoría`
+hardcodeado en `constants.ts`, orden fijo de categorías, bucket `Otros` al
+final (también desplegable, mismo comportamiento), riesgo aceptado del mapeo
+por nombre exacto. Sin cambios en modelo, API ni `@shared`. El acordeón
+servicio → imagen → profesionales de adentro no cambia.
+
+**Comportamiento**
+- Todas cerradas al entrar. Varias pueden estar abiertas a la vez
+  (independientes), NO acordeón exclusivo: en mobile, abrir una categoría de
+  abajo colapsando la de arriba corre el header bajo el dedo.
+- El estado (categorías abiertas + servicio expandido) vive en `ReservaPage`,
+  no en `Catalogo`: "Cambiar" desde el paso 2 vuelve al paso 1 con la
+  categoría y el servicio elegidos abiertos (§4.11, "sin perder nada").
+- Header = `<button>` con `aria-expanded` y `aria-controls`. Fila plana, sin
+  card (los servicios de adentro ya son cards).
+- Header: nombre 12.5px / peso 600 / `letter-spacing:.14em`, con
+  `color: var(--color-tinta)` EXPLÍCITO (el `<button>` nativo no hereda
+  color). "N servicios" y chevron en `--color-tinta-72` (tinta-48 sobre papel
+  da ~3.9:1, bajo AA). Separadores en `--color-linea-fuerte`. El chevron
+  rota 180° al abrir.
+- Animación con `grid-template-rows: 0fr → 1fr` (NO `max-height` fijo: recorta
+  el acordeón anidado). Contenido cerrado no enfocable (`visibility:hidden`
+  con delay, o `inert`). Respetar `prefers-reduced-motion`.
+
+**Trade-off aceptado:** un tap más hasta la profesional (categoría →
+servicio → profesional).
+
+**A verificar al implementar:** `.svc.open .svc-body { max-height: 320px }`.
+Con imagen 16/9 (~225px a 460px) + 2-3 profesionales puede estar recortando
+hoy. Medir, no asumir. Si recorta, es fix aparte y se avisa.
+
+**Fuera de esta entrega:** `.duracion` usa tinta-48 (mismo problema de
+contraste). No se toca.
+
+### 2026-09-21 — Reserva pública, paso 2: "Elegir fecha" + ventana de 30 días — DECISIÓN CERRADA (ajusta §4.11)
+
+**Problema:** la grilla pública pedía sólo 7 días fijos (§4.11, "sólo el
+tramo visible") ⇒ la clienta no podía reservar más lejos aunque el server lo
+permitiera (`ventanaMaximaDias`). Camila quiere reservas hasta ~1 mes.
+
+**Decisión**
+1. Vista default SIN cambios: próximos 7 días con sus slots.
+2. Botón "Elegir fecha" junto al título "Elegí un horario" ⇒ bottom sheet
+   con calendario (mismo patrón `position:fixed` + `body.sheet-abierta` que
+   el sheet de datos, §4.11). Días con ≥1 slot para ese servicio+profesional
+   = habilitados; el resto (sin slots, feriados, excepciones, fuera de
+   ventana) = deshabilitados. Nunca se puede elegir un día vacío ⇒ no hay
+   estado vacío "por día elegido". Leyenda: "Los días en gris no tienen
+   horarios disponibles."
+3. Elegir un día ⇒ la grilla muestra sólo ese día + banner "Mostrando:
+   <fecha> · Ver próximos días" (vuelve al default).
+4. Rango: hoy … hoy+30 días FIJOS (`DIAS_CALENDARIO = 30`), no "mismo día del
+   mes siguiente" (28-31). La navegación de mes se acota por el rango (puede
+   tocar 3 meses calendario), no por un número fijo de meses.
+5. Si en los 30 días no hay ningún slot: el botón "Elegir fecha" no se
+   muestra; queda el empty-state actual.
+
+**Cómo se sabe qué días hay, sin backend nuevo:** un único
+`GET /api/disponibilidad` con `hasta = hoy+30` al entrar al paso 2. Ya
+devuelve lista plana de slots (§15.2); el front agrupa por día LOCAL con
+Luxon (America/Argentina/Buenos_Aires), mismas reglas de fechas que §2:
+- default = primeros 7 días desde hoy
+- calendario = set de días que tienen slots
+- elegir día = leer del mismo array, sin otro request
+Cache en memoria por `servicioId:profesionalId`; cambiar cualquiera lo
+invalida y resetea la fecha elegida. "Hoy" y los límites se calculan en zona
+Argentina, no la del dispositivo.
+
+**Alternativas descartadas**
+- Endpoint público con `ventanaMaximaDias` (camino B del chat anterior):
+  innecesario, deshabilitar por disponibilidad real ya excluye lo que cae
+  fuera de ventana. El camino A (tocar cualquier día y mostrar vacío) queda
+  superado por el pedido.
+- Endpoint liviano `/api/disponibilidad/dias`: no ahorra CPU (para saber si
+  un día tiene un slot hay que generarlos igual), suma superficie pública y
+  un segundo request.
+- Fetch lazy (7 días al entrar, 30 al abrir el calendario): conserva el
+  default barato pero duplica fuentes de verdad y agrega spinner al sheet.
+  Queda como fallback si la latencia de los 30 días en Render free molesta.
+
+§15.2 ya prevé pedir "semana/mes": sin cambios en `server/`, `@shared` ni
+modelo.
+
+**409 SLOT_OCUPADO:** `detalle.slots` reemplaza los slots de ESE día en el
+cache (no el rango entero). Si el día queda vacío, se deshabilita en el
+calendario.
+
+**Riesgos**
+- `ventanaMaximaDias` en prod está en 20: subir a 30 en Configuración. Es
+  dato, no código. Si no, los días 21-30 salen deshabilitados.
+- Con horizonte de 30 días, feriados, vacaciones y bloqueos tienen que estar
+  cargados con esa anticipación; si no, el calendario ofrece días que no se
+  atienden.
+- Payload: ~30 días × N slots (decenas de KB sin comprimir). El rate limit de
+  60/min no molesta: navegar meses es en memoria, hay menos requests que
+  antes.
+- Cache sin TTL: un slot puede ocuparse mientras la clienta mira el
+  calendario. Lo cubre el 409 existente.
+- Panel (`NuevoTurnoDrawer`, 14 días + "Ver más fechas") no se toca.
+  Unificarlo con este calendario es fase 2.
+
+**Tests:** `server/` sin cambios. `client-publico` sigue sin infra de test
+(§14) ⇒ guion manual.
+
+### 2026-09-21 — Implementación: categorías desplegables (client-publico)
+
+Implementa la entrada "Catálogo público: categorías desplegables". Sin
+contradicciones con §1–16 ni con el resto de este archivo.
+
+**Archivos tocados:** `Catalogo.tsx`, `ReservaPage.tsx`, `ReservaPage.css`.
+**NO se tocó:** `constants.ts`, `ServicioCard.tsx`, `@shared`, `server/`,
+`client/` (panel).
+
+**Qué se hizo**
+- `ReservaPage` guarda `categoriasAbiertas: Set<string>` (vacío al entrar) y
+  `toggleCategoria`; junto con `servicioAbiertoId` (que ya vivía ahí) sobrevive
+  al paso 2 ⇒ "Cambiar" vuelve con categoría y servicio elegidos abiertos.
+  Verificado en navegador.
+- `Catalogo`: cada categoría (incluida "Otros") es un `<section>` con
+  `<h2><button aria-expanded aria-controls>` y un panel con `role="region"`
+  `aria-labelledby`. Conteo "N servicio(s)" y chevron a la derecha. Varias
+  abiertas a la vez.
+- CSS: header con `color: var(--color-tinta)` explícito; conteo y chevron en
+  `--color-tinta-72`; separadores `--color-linea-fuerte` (0.5px); nombre
+  12.5px / 600 / `letter-spacing:.14em`. Animación `grid-template-rows`
+  0fr→1fr (clip en `.categoria-panel-in`, padding un nivel más adentro para que
+  la fila colapse a 0). Cerrado = `visibility:hidden` con delay igual a la
+  transición ⇒ ni el tab ni el lector de pantalla entran (verificado: con todo
+  cerrado el Tab salta de header en header y de ahí al footer).
+- `inert` no se usó: React 18 no lo tipa; `visibility` cubre lo mismo.
+- `prefers-reduced-motion`: ya lo cubre el `* { transition:none !important }`
+  global que existía al final de `ReservaPage.css`; no se duplicó.
+- Se eliminó `.categoria-titulo` (lo reemplaza el header-botón).
+
+**⚠ Hallazgo para reportar (NO se arregló):** la entrada dice
+`.svc.open .svc-body { max-height: 320px }`, pero en el código ya estaba en
+**640px** (se subió cuando se sumó la imagen, hay un comentario en el CSS). Se
+midió en Chrome (viewport 460px, imagen 16/9 + profesionales):
+imagen + 3 profesionales = 469px de contenido → entra sobrado; imagen + 6
+profesionales = 667px → **recorta ~27px** (la última profesional queda cortada);
+a 360px de ancho con 6 profesionales = 610px → entra. Con 3 profesionales
+(caso real hoy) no recorta. Con 6+ sí. Fix aparte si el salón llega a tener 6
+profesionales en un mismo servicio (p. ej. pasar `.svc-body` al mismo truco de
+`grid-template-rows`, que no necesita tope).
+
+**Guión de prueba manual** (`npm run dev` desde la raíz, abrir
+`http://localhost:5174`):
+1. Entrar: todas las categorías cerradas, sin ningún servicio visible.
+2. Abrir UÑAS y luego CEJAS: quedan las dos abiertas. Cerrar UÑAS: CEJAS sigue.
+3. Teclado: Tab hasta un header, Enter y Espacio lo abren/cierran; con la
+   categoría cerrada, Tab no entra a los servicios de adentro.
+4. Ver contraste: nombre en negro, "N servicios" y chevron en gris oscuro
+   legible; el chevron rota al abrir.
+5. Abrir un servicio con imagen: la imagen y las profesionales entran completas.
+6. Elegir profesional ⇒ paso 2 ⇒ "Cambiar": vuelve con la categoría y el
+   servicio abiertos.
+7. Sistema con "reducir movimiento" activado: abre/cierra sin animación.
+
+### 2026-09-21 — Implementación: paso 2 "Elegir fecha" + ventana de 30 días (client-publico)
+
+Implementa la entrada "Reserva pública, paso 2: Elegir fecha + ventana de 30
+días". Sin contradicciones con §1–16: modelo-datos-turnos.md §15.2 ya prevé que
+el front pida "semana/mes".
+
+**Verificación previa en `server/` (sin cambios, como se pidió):**
+`queryDisponibilidadSchema` sólo exige `desde`/`hasta` como `datetime()`
+opcionales — NO hay tope de rango. `consultarDisponibilidad` hace
+`hastaEfectivo = min(hasta, startOf(día local) + (ventanaMaximaDias+1) días)`:
+con `ventanaMaximaDias < 30` clampea en silencio, y `desde >= hasta` devuelve
+`{slots:[]}`, nunca 400. Un GET con `hasta` = hoy+30 es válido.
+
+**Archivos tocados:** `lib/format/fecha.ts`, `Grilla.tsx`, `ReservaPage.tsx`,
+`ReservaPage.css`, y nuevo `components/Calendario.tsx`.
+**NO se tocó:** `server/`, `@shared`, `client/` (panel, incluido
+`NuevoTurnoDrawer`), `api.ts`, `constants.ts`, `tokens.css`, `HojaDatos.tsx`.
+
+**Cómo quedó**
+- `fecha.ts`: `rangoSemanaUtc()` pasó a `rangoDisponibilidadUtc(dias)` — mismo
+  helper, sólo cambia el `hasta` — más `DIAS_CALENDARIO = 30`,
+  `DIAS_VISTA_DEFAULT = 7`, `hoyLocal()`, `diaDeClave()`,
+  `claveUltimoDiaVistaDefault()`, `diasConSlots()`, `fechaCompleta()`,
+  `fechaCorta()`. Todo en `America/Argentina/Buenos_Aires` con Luxon.
+- Un único `GET /api/disponibilidad` al entrar al paso 2 con
+  `hasta` = 00:00 local de hoy+31 (exclusivo) ⇒ el día hoy+30 entra completo, el
+  mismo límite que usa el server. Con Z.
+- Cache en `ReservaPage` de UN par `servicioId:profesionalId`: mismo par (p. ej.
+  "Cambiar" y elegir lo mismo) ⇒ reusa sin GET y conserva el día elegido; otro
+  par ⇒ invalida y resetea la fecha. Una respuesta de un par anterior se
+  descarta (antes de este cambio esa carrera no estaba cubierta).
+- Vista default = 7 días CALENDARIO locales (hoy…hoy+6). Antes era
+  `ahora + 7×24h`, que arrastraba un octavo día parcial; ahora es exacto.
+- Botón "Elegir fecha" a la derecha del título; se oculta si no hay slots en los
+  30 días (queda el empty-state de siempre).
+- `Calendario.tsx`: sheet con el patrón `position:fixed` + `body.sheet-abierta`
+  (el scroll-lock ahora cubre los dos sheets). Sin librerías, semana desde
+  lunes, celdas `aspect-ratio:1`, hoy con borde, elegido en tinta, deshabilitados
+  `opacity:.4`. Habilitado = día con ≥1 slot dentro de [hoy, hoy+30]. Prev/next
+  acotados por el rango (al 2026-09-21: septiembre y octubre). Cada día es `<button>` con
+  `aria-label` de fecha completa ("lunes 21 de septiembre de 2026"),
+  `aria-pressed`, `aria-current="date"`. Además `role="dialog"` `aria-modal`,
+  foco inicial dentro, Escape cierra, el foco vuelve al botón "Elegir fecha".
+- Elegir día ⇒ la grilla muestra sólo ese día + banner "Mostrando: <fecha> · Ver
+  próximos días" (vuelve al default). Sin otro request.
+- 409 `SLOT_OCUPADO`: `detalle.slots` reemplaza sólo los slots de ESE día en el
+  cache. Si el día queda vacío se deshabilita solo en el calendario (los
+  habilitados se derivan de los slots), y si era el día elegido se vuelve al
+  default — no existe el estado vacío por día. Además: si faltara el slot
+  elegido, el cache ya no se pisa entero con `detalle.slots` (comportamiento
+  viejo, que con 30 días habría dejado sólo un día).
+
+**Decisiones menores que no estaban en la entrada (revisar si molestan)**
+- Empty-state nuevo cuando hay slots en los 30 días pero ninguno en los primeros
+  7: "No hay horarios en los próximos días. Probá con “Elegir fecha”." — el botón
+  sigue visible en ese caso, un texto de "probá más adelante" quedaba mudo.
+- `tinta-30` no existe en `tokens.css` (§3 cerrado); sólo está en
+  `mockups/footer-camila.html` como `#a9a8b0`. Se declaró como variable local
+  `--cal-tinta-30` dentro de `.cal-dia`, sin tocar tokens. Si se lo quiere como
+  token de verdad, es decisión de diseño.
+- `calendario-camila.html` no estaba en el repo: se armó desde la descripción de
+  la entrada. Si hay un mockup, compararlo.
+- Con un 429 o error de red el paso 2 muestra el error con "Reintentar" (igual
+  que antes); el botón "Elegir fecha" no aparece mientras carga o en error.
+
+**Riesgos vigentes (ya en la entrada, confirmados):** `ventanaMaximaDias` en
+prod en 20 ⇒ subirla a 30 en Configuración (dato), si no los días 21–30 salen
+deshabilitados; feriados/vacaciones/bloqueos cargados con anticipación; cache
+sin TTL cubierto por el 409.
+
+**Verificación:** `npm run typecheck` limpio (4 workspaces);
+`npm run build --workspace=client-publico` limpio (177 módulos); suites `shared`
+10/10 y `server` 152/152 (sin cambios de conteo, no se agregaron tests:
+`client-publico` no tiene runner). Comportamiento probado en Chrome headless
+(`puppeteer-core` desde el scratchpad, fuera del repo) contra un mock de la API,
+con el dispositivo en 4 zonas horarias (Buenos Aires, Tokio, Auckland, Los
+Ángeles): un solo GET, `hasta` correcto con Z, 7 días default, calendario y
+borde del rango, día elegido + banner, cambio de profesional/servicio, 0 slots,
+`ventanaMaximaDias=20`, y 409 (día reducido y día vaciado). Sin errores de
+consola.
+
+**Guión de prueba manual** (`npm run dev` desde la raíz; abrir
+`http://localhost:5174`; necesita la API con datos reales y `ventanaMaximaDias`
+en 30 para ver el rango completo):
+1. **Default 7 días:** elegir servicio + profesional ⇒ la grilla muestra los
+   próximos 7 días (ver en la pestaña Network un solo
+   `GET /api/disponibilidad`, con `hasta` ≈ 31 días adelante).
+2. **Abrir calendario:** tocar "Elegir fecha" (a la derecha de "Elegí un
+   horario") ⇒ sube el sheet, el fondo no scrollea, el foco queda adentro.
+   Escape o tocar afuera lo cierra y el foco vuelve al botón.
+3. **Día habilitado:** tocar un día en negro ⇒ el sheet cierra, la grilla
+   muestra sólo ese día y el banner "Mostrando: … · Ver próximos días". No hay
+   otro request. "Ver próximos días" vuelve al default.
+4. **Día deshabilitado:** los grises (sin horarios, domingos, pasados, fuera de
+   ventana) no responden al toque ni al Tab. Hoy lleva borde.
+5. **Borde del rango:** "Mes anterior" está deshabilitado en el mes de hoy;
+   avanzar hasta el último mes: "Mes siguiente" se deshabilita y sólo están
+   habilitados los días hasta hoy+30.
+6. **Cambiar de profesional:** elegir un día, "Cambiar", elegir otra
+   profesional ⇒ hay un GET nuevo, no queda banner (fecha reseteada) y el
+   calendario muestra los días de la nueva profesional. Elegir la MISMA otra vez
+   ⇒ sin GET nuevo y el día sigue elegido.
+7. **Sin horarios:** una profesional sin ningún slot en 30 días ⇒ no aparece
+   "Elegir fecha", sólo el empty-state.
+8. **Forzar un 409:** abrir el mismo turno en dos pestañas; en la primera
+   confirmar el horario X; en la segunda (con un día elegido desde el
+   calendario) elegir el mismo X y confirmar ⇒ toast "Ese horario se acaba de
+   ocupar", vuelve al mismo día sin X y sin otro GET. Si era el último horario
+   del día: vuelve a la vista default y ese día queda gris en el calendario.
+9. **Zona horaria:** con el dispositivo en otra zona (p. ej. cambiar la zona del
+   sistema) "hoy" en el calendario sigue siendo la fecha de Argentina.

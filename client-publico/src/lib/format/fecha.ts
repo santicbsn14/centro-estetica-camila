@@ -63,13 +63,57 @@ export function agruparPorDiaLocal(slots: Slot[]): GrupoDia[] {
     }));
 }
 
-/** Ventana [ahora, ahora+7 días) en ISO UTC con sufijo Z — "el tramo
- * visible (semana)", frontend.md §4.11, no los ~60 días de la ventana
- * completa (el server clampea igual, pero no tiene sentido pedirlos). */
-export function rangoSemanaUtc(): { desde: string; hasta: string } {
-  const ahora = DateTime.utc();
+/** Días que cubre el calendario: hoy … hoy+30, fijos (frontend.md 2026-09-21,
+ * "Elegir fecha"), no "mismo día del mes siguiente". Un único GET pide todo
+ * el rango al entrar al paso 2; el default (7 días) y el calendario leen del
+ * mismo array. */
+export const DIAS_CALENDARIO = 30;
+
+/** Días de la vista default de la grilla, contados desde hoy inclusive. */
+export const DIAS_VISTA_DEFAULT = 7;
+
+/** Hoy a las 00:00 en zona Argentina — nunca la zona del dispositivo. */
+export function hoyLocal(): DateTime {
+  return DateTime.now().setZone(TIMEZONE_CENTRO).startOf('day');
+}
+
+/** yyyy-MM-dd (clave de `claveDiaLocal`) → medianoche local de ese día. */
+export function diaDeClave(clave: string): DateTime {
+  return DateTime.fromFormat(clave, 'yyyy-MM-dd', { zone: TIMEZONE_CENTRO });
+}
+
+/** Ventana [ahora, fin del día hoy+dias] en ISO UTC con sufijo Z. El `hasta`
+ * es exclusivo: arranca el día siguiente al último, así el último día entra
+ * completo (mismo límite que usa el server para clampear por
+ * ventanaMaximaDias). */
+export function rangoDisponibilidadUtc(dias: number): { desde: string; hasta: string } {
   return {
-    desde: ahora.toUTC().toISO()!,
-    hasta: ahora.plus({ days: 7 }).toUTC().toISO()!,
+    desde: DateTime.utc().toISO()!,
+    hasta: hoyLocal()
+      .plus({ days: dias + 1 })
+      .toUTC()
+      .toISO()!,
   };
+}
+
+/** Clave del último día de la vista default (hoy + 6). Comparable como string. */
+export function claveUltimoDiaVistaDefault(): string {
+  return hoyLocal()
+    .plus({ days: DIAS_VISTA_DEFAULT - 1 })
+    .toFormat('yyyy-MM-dd');
+}
+
+/** Días (yyyy-MM-dd local) que tienen al menos un slot. */
+export function diasConSlots(slots: Slot[]): Set<string> {
+  return new Set(slots.map((s) => claveDiaLocal(s.inicio)));
+}
+
+/** "lunes 21 de septiembre de 2026" — para aria-label de cada día. */
+export function fechaCompleta(clave: string): string {
+  return diaDeClave(clave).setLocale('es').toFormat("cccc d 'de' LLLL 'de' yyyy");
+}
+
+/** "lunes 21 sep" — mismo formato corto que las etiquetas de día de la grilla. */
+export function fechaCorta(clave: string): string {
+  return diaDeClave(clave).setLocale('es').toFormat('cccc d LLL');
 }

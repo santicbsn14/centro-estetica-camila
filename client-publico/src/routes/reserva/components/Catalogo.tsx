@@ -4,19 +4,24 @@ import { ServicioCard } from './ServicioCard';
 
 interface Props {
   servicios: Carga<ServicioPublico[]>;
+  categoriasAbiertas: ReadonlySet<string>;
   servicioAbiertoId: string | null;
   profesionalesPorServicio: Record<string, Carga<ProfesionalPublico[]>>;
+  onToggleCategoria: (categoria: string) => void;
   onToggleServicio: (servicio: ServicioPublico) => void;
   onElegirProfesional: (servicio: ServicioPublico, profesional: ProfesionalPublico) => void;
   onReintentar: () => void;
 }
 
-// Paso 1 — acordeón de servicios (frontend.md §4.11). Clonado de
-// .svc/.svc-hd/.svc-body/.prof-btn del mockup.
+// Paso 1 — categorías desplegables (frontend.md 2026-09-21) que contienen el
+// acordeón de servicios (§4.11). Clonado de .svc/.svc-hd/.svc-body/.prof-btn
+// del mockup.
 export function Catalogo({
   servicios,
+  categoriasAbiertas,
   servicioAbiertoId,
   profesionalesPorServicio,
+  onToggleCategoria,
   onToggleServicio,
   onElegirProfesional,
   onReintentar,
@@ -52,25 +57,63 @@ export function Catalogo({
     if (lista) lista.push(servicio);
     else buckets.set(categoria, [servicio]);
   }
-  const categoriasConServicios = [...CATEGORIAS_SERVICIO, CATEGORIA_FALLBACK].filter((c) => buckets.has(c));
+  const todasLasCategorias = [...CATEGORIAS_SERVICIO, CATEGORIA_FALLBACK];
 
   return (
     <div className="catalogo">
-      {categoriasConServicios.map((categoria) => (
-        <div className="categoria" key={categoria}>
-          <div className="categoria-titulo">{categoria}</div>
-          {buckets.get(categoria)!.map((servicio) => (
-            <ServicioCard
-              key={servicio._id}
-              servicio={servicio}
-              abierto={servicioAbiertoId === servicio._id}
-              profesionales={profesionalesPorServicio[servicio._id]}
-              onToggle={onToggleServicio}
-              onElegirProfesional={onElegirProfesional}
-            />
-          ))}
-        </div>
-      ))}
+      {todasLasCategorias.map((categoria, i) => {
+        const lista = buckets.get(categoria);
+        if (!lista) return null;
+        const abierta = categoriasAbiertas.has(categoria);
+        const headerId = `categoria-hd-${i}`;
+        const panelId = `categoria-panel-${i}`;
+
+        return (
+          <section className={`categoria${abierta ? ' categoria--abierta' : ''}`} key={categoria}>
+            <h2 className="categoria-h">
+              <button
+                type="button"
+                id={headerId}
+                className="categoria-hd"
+                aria-expanded={abierta}
+                aria-controls={panelId}
+                onClick={() => onToggleCategoria(categoria)}
+              >
+                <span className="categoria-nombre">{categoria}</span>
+                <span className="categoria-cuenta">{lista.length === 1 ? '1 servicio' : `${lista.length} servicios`}</span>
+                <svg
+                  className="categoria-chev"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  aria-hidden="true"
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+            </h2>
+            <div className="categoria-panel" id={panelId} role="region" aria-labelledby={headerId}>
+              <div className="categoria-panel-in">
+                <div className="categoria-panel-body">
+                  {lista.map((servicio) => (
+                    <ServicioCard
+                      key={servicio._id}
+                      servicio={servicio}
+                      abierto={servicioAbiertoId === servicio._id}
+                      profesionales={profesionalesPorServicio[servicio._id]}
+                      onToggle={onToggleServicio}
+                      onElegirProfesional={onElegirProfesional}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
