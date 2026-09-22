@@ -4036,3 +4036,51 @@ Ambos revisados a ojo abriendo las imágenes recortadas.
 responde 200 con `content-type: image/png` en Hostinger, y probar el preview con
 `?v=2` / Facebook Sharing Debugger por el caché de las plataformas (ver
 "Riesgo" de la entrada de decisión).
+
+---
+
+### 2026-09-22 — Fix: select de alcance de ExcepcionesPage excluía a la admin que atiende (§4.8)
+
+Cierra el primer hallazgo pendiente que había quedado anotado en la entrada
+2026-09-19 ("Fix: selector de profesional de NuevoTurnoDrawer..."): mismo bug,
+mismo origen (`rol==='profesional'` copiado sin revisar la semántica de este
+lugar), ahora en `ExcepcionesPage.tsx:85`.
+
+**Fix (quirúrgico, una línea):** el `useMemo` `profesionales` pasa de
+`u.rol === 'profesional'` a `u.activo && u.atiende`, sin mirar `rol` — mismo
+criterio que `NuevoTurnoDrawer` (2026-09-19).
+- Archivo: `client/src/routes/excepciones/ExcepcionesPage.tsx:85`.
+- La opción "Todo el centro" del select (§4.8) no se tocó — ya convivía con
+  el listado de profesionales antes del fix, agregar a Camila no reemplaza
+  ni ambigua nada.
+- `server/` no se tocó.
+
+**Alcance explícitamente NO tocado en esta tarea (a diferencia de
+2026-09-19, donde sí se corrigió un comentario stale de paso):** el
+`useMemo` `profesionales` alimenta A LA VEZ el select de alcance del drawer
+Y el filtro de la lista (mismo array, ver nota de la entrada anterior) —
+este fix cambia ambos usos, tal cual fue encargado. El comentario en
+`ExcepcionDrawer.tsx:17` ("ya filtrado a rol==='profesional' por el padre")
+quedó desactualizado por este cambio y NO se corrigió — se evaluó tocarlo
+pero se descartó porque el encargo pedía "cambio quirúrgico" acotado a
+`ExcepcionesPage.tsx` + esta bitácora, nada más. Queda como hallazgo menor
+para la próxima tarea que toque ese archivo.
+
+Sigue pendiente (sin tocar en esta tarea, ver entrada 2026-09-19, punto 2):
+`client/src/routes/turnos/api.ts:66` (`listarProfesionales`, filtro "Todas
+las profesionales" de `TurnosPage`) — mismo bug de fondo, criterio de fix
+distinto (ese filtro tampoco mira `atiende` hoy).
+
+**Sin contradicciones** contra §1–§16.
+
+**Verificación:** `npm run typecheck` limpio (los 4 workspaces: shared,
+server, client, client-publico). Sin cambios de código en `server`/`shared`
+⇒ no se re-corrió su suite de tests (fuera de alcance, sin impacto posible).
+`client`/`client-publico` siguen sin test runner (§14) — la barra es
+typecheck + guión manual.
+
+**Guión de prueba manual:** loguearse como Camila (rol `admin`,
+`atiende:true`) → Excepciones → "Nueva excepción" → abrir el select
+"Alcance" → debe listarse junto a las demás profesionales activas (antes no
+aparecía). Repetir con el filtro de profesional de la lista (mismo select,
+misma fuente) — debe poder filtrarse por ella.

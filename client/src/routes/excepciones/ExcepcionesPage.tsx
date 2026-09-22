@@ -82,7 +82,7 @@ export function ExcepcionesPage() {
   }, [cargar]);
 
   const profesionales = useMemo(
-    () => usuarios.filter((u) => u.rol === 'profesional').sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
+    () => usuarios.filter((u) => u.activo && u.atiende).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
     [usuarios]
   );
 
