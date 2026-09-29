@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type NavIconName = 'turnos' | 'servicios' | 'profesionales' | 'configuracion' | 'excepciones' | 'mi';
+export type NavIconName = 'turnos' | 'agenda' | 'servicios' | 'profesionales' | 'configuracion' | 'excepciones' | 'mi';
 
 // Paths clonados 1:1 de los <svg class="ic"> de client/mockups/*.html — un
 // ícono por item de NAV_ITEMS (layout/nav.ts). Puramente presentacional, sin
@@ -10,6 +10,14 @@ const PATHS: Record<NavIconName, ReactNode> = {
     <>
       <rect x="3" y="4" width="18" height="18" rx="2" />
       <path d="M16 2v4M8 2v4M3 10h18" />
+    </>
+  ),
+  // Sin mockup (agenda, §4.14): calendario con grilla de semana, mismo trazo
+  // que el de turnos para que se lean como familia.
+  agenda: (
+    <>
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18M3 16h18M9 10v12M15 10v12" />
     </>
   ),
   servicios: (

@@ -4,6 +4,7 @@ import { RequireSesion } from './routes/guards/RequireSesion';
 import { RequireRol } from './routes/guards/RequireRol';
 import { LoginPage } from './routes/login/LoginPage';
 import { TurnosPage } from './routes/turnos/TurnosPage';
+import { AgendaPage } from './routes/agenda/AgendaPage';
 import { MiPerfilPage } from './routes/mi/MiPerfilPage';
 import { ServiciosPage } from './routes/servicios/ServiciosPage';
 import { ProfesionalesPage } from './routes/profesionales/ProfesionalesPage';
@@ -24,6 +25,7 @@ function App() {
         <Route element={<PanelLayout />}>
           <Route index element={<Navigate to="/turnos" replace />} />
           <Route path="/turnos" element={<TurnosPage />} />
+          <Route path="/agenda" element={<AgendaPage />} />
           <Route path="/mi" element={<MiPerfilPage />} />
 
           <Route element={<RequireRol roles={['admin']} />}>

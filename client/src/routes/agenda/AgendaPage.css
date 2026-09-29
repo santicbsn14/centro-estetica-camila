@@ -1,0 +1,210 @@
+/* Agenda semanal — panel (frontend.md §4.14). Sin mockup: mismo lenguaje que
+   el listado (TurnosPage.css) — tokens de §3, hairlines, cards 12px, chips
+   con la paleta de badges por estado. Reusa de TurnosPage.css (cargada por
+   DrawerDetalleTurno) .filtro-profesional, .flag y turnos-page__vacio/aviso. */
+
+.agenda-page__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.agenda-page__titulo {
+  font-size: 1.9rem;
+}
+
+.agenda-page__sub {
+  font-size: 0.82rem;
+  color: var(--color-tinta-48);
+}
+
+.agenda-page__barra {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.4rem;
+}
+
+.agenda-page__nav-semana {
+  display: flex;
+  gap: 0.4rem;
+}
+
+/* Grilla desktop: columna de horas + una por día. Cada fila es
+   display:contents para que sus celdas participen de la grilla del padre. */
+.agenda-grilla__scroll {
+  overflow-x: auto;
+  background: var(--color-blanco);
+  border: var(--borde-hairline);
+  border-radius: var(--radio-card);
+}
+
+.agenda-grilla {
+  display: grid;
+}
+
+.agenda-grilla__fila {
+  display: contents;
+}
+
+.agenda-grilla__esquina,
+.agenda-grilla__dia {
+  background: var(--color-blanco);
+  border-bottom: var(--borde-hairline-fuerte);
+}
+
+.agenda-grilla__dia {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-tinta-72);
+  padding: 0.65rem 0.6rem;
+  border-left: var(--borde-hairline);
+}
+
+.agenda-grilla__dia.is-hoy {
+  color: var(--color-tinta);
+  background: var(--color-papel);
+  box-shadow: inset 0 -2px 0 var(--color-tinta);
+}
+
+.agenda-grilla__hora {
+  font-size: 0.72rem;
+  color: var(--color-tinta-48);
+  padding: 0.45rem 0.6rem 0 0;
+  text-align: right;
+  border-top: var(--borde-hairline);
+}
+
+.agenda-grilla__celda {
+  min-width: 0;
+  min-height: 2.6rem;
+  padding: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-top: var(--borde-hairline);
+  border-left: var(--borde-hairline);
+}
+
+.agenda-grilla__celda.is-hoy {
+  background: var(--color-papel);
+}
+
+/* Chip de turno — color por estado, mismos tokens que .badge--*. Sin
+   rechazado/cancelado: construirAgenda los oculta (§4.14). */
+.agenda-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 6px;
+  padding: 0.3rem 0.45rem;
+  font-family: var(--fuente-ui);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+}
+
+.agenda-chip:hover,
+.agenda-chip:focus-visible {
+  box-shadow: inset 0 0 0 1px currentColor;
+  outline: none;
+}
+
+.agenda-chip__texto {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agenda-chip__flag {
+  border-color: currentColor;
+  color: inherit;
+  background: var(--color-blanco);
+}
+
+.agenda-chip--pendiente {
+  color: var(--color-estado-pendiente-texto);
+  background: var(--color-estado-pendiente-fondo);
+}
+
+.agenda-chip--confirmado {
+  color: var(--color-estado-confirmado-texto);
+  background: var(--color-estado-confirmado-fondo);
+}
+
+.agenda-chip--completado {
+  color: var(--color-estado-completado-texto);
+  background: var(--color-estado-completado-fondo);
+}
+
+.agenda-chip--ausente {
+  color: var(--color-estado-ausente-texto);
+  background: var(--color-estado-ausente-fondo);
+}
+
+/* Mobile (<768px): un día + tira de pills */
+.agenda-dias {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  margin-bottom: 0.9rem;
+  padding-bottom: 2px;
+}
+
+.agenda-dias__pill {
+  flex: none;
+  border: var(--borde-hairline-fuerte);
+  background: var(--color-blanco);
+  color: var(--color-tinta-72);
+  border-radius: var(--radio-pill);
+  padding: 0.4rem 0.8rem;
+  font-family: var(--fuente-ui);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.agenda-dias__pill.is-hoy {
+  border-color: var(--color-tinta);
+  color: var(--color-tinta);
+}
+
+.agenda-dias__pill.is-activo {
+  background: var(--color-tinta);
+  border-color: var(--color-tinta);
+  color: var(--color-papel);
+}
+
+.agenda-dia {
+  background: var(--color-blanco);
+  border: var(--borde-hairline);
+  border-radius: var(--radio-card);
+  overflow: hidden;
+}
+
+.agenda-dia__fila {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+}
+
+.agenda-dia__fila:first-child > * {
+  border-top: 0;
+}
+
+.agenda-dia .agenda-grilla__celda {
+  border-left: var(--borde-hairline);
+}

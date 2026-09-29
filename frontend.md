@@ -4084,3 +4084,283 @@ typecheck + guión manual.
 "Alcance" → debe listarse junto a las demás profesionales activas (antes no
 aparecía). Repetir con el filtro de profesional de la lista (mismo select,
 misma fuente) — debe poder filtrarse por ella.
+
+### 4.14 Pantalla: Agenda semanal (panel, ambos roles) — DECISIÓN CERRADA
+
+Pedido de la clienta posterior a la propuesta aprobada (2026-09-29): vista de
+semana, grilla día × hora, con los turnos como chips. No figura como ítem en
+la propuesta; se toma como extensión del panel de administración
+[COMPLETAR: cortesía / extra con costo]. SOLO FRONT: no toca backend, ni
+`@shared`, ni `modelo-datos-turnos.md`.
+
+**Datos.** Un solo `GET /api/turnos` (§15.6 backend) por semana:
+`desde = inicioDiaLocalUtc(lunes)`, `hasta = finDiaLocalUtc(domingo)`
+(helpers existentes de `lib/format/fecha.ts`), sin `estado`, con
+`profesionalId` sólo si el admin filtró. El ownership de la profesional lo
+fuerza el server. Consume `TurnoPanelLista` tal cual, importado de
+`routes/turnos/types.ts` (NO mover los shapes a `@shared` en esta tarea;
+sigue siendo el pendiente de §4.4).
+
+**Ruta y nav.** `/agenda`, ítem "Agenda" en la sidebar para ambos roles,
+debajo de "Turnos". La landing post-login sigue siendo `/turnos`: la cola de
+acción vive ahí y la agenda es de consulta. Semana en la URL:
+`?semana=YYYY-MM-DD`, normalizada al lunes local con
+`startOf('week')`; param ausente o inválido ⇒ semana actual. Navegación:
+← anterior · Hoy · siguiente →. Sin clamp: pasado y futuro libres.
+
+**Grilla.** Filas por hora entera (NO por `pasoGrillaMin`), columnas por día.
+Cada turno cae en la celda (día local, hora local de `inicio`). Bucket por
+hora de inicio: un turno de 14:30 de 90 min va sólo a la celda de 14:00.
+Trade-off aceptado: la duración no se dibuja como bloque, para no resolver el
+layout de columnas por solape entre profesionales en la vista admin. Se
+mitiga mostrando `inicio–fin` en el chip. Un "hueco" visual NO es un riesgo
+de doble reserva: el alta manual valida el solape en el server (§6 backend).
+- Horas: constante 08 a 20 (última fila). Se expande si un turno cae afuera
+  (p. ej. `fueraDeHorario`). NO se lee `configuracion.horarios`: es
+  admin-only (§15.8) y la profesional no puede leerlo. Mismo comportamiento
+  para ambos roles.
+- Días: lunes a sábado fijos. Domingo sólo si la semana tiene algún turno
+  visible el domingo (misma regla de expansión).
+- Columna de hoy resaltada.
+
+**Chip.** `HH:mm–HH:mm · nombre de la clienta`, truncado con ellipsis y el
+nombre completo en `title`. Color por estado con los tokens de badge de §3.
+Marca de `fueraDeHorario` igual que en la fila del listado. Admin SIN filtro
+de profesional ⇒ sufijo con el nombre corto de la profesional. Sin chip de
+urgencia (eso es del listado). Varios chips en una celda se apilan,
+ordenados por `inicio` asc (orden del server, no reordenar).
+
+**Estados visibles.** pendiente, confirmado, completado, ausente.
+`rechazado` y `cancelado` se ocultan (no ocupan la silla). Se filtra en el
+cliente.
+
+**Interacción.** Click en chip ⇒ el MISMO drawer de detalle de §4.4
+(`DetalleTurno` + `GET /api/turnos/:id`), con las mismas acciones y el mismo
+`ejecutarAccion`: refetch de semana + detalle al terminar, sin optimismo, y
+409 `ESTADO_INVALIDO` con el mismo toast. Para no duplicar, la orquestación
+del drawer se extrae de `TurnosPage` a un hook compartido
+(p. ej. `useDetalleTurno`) SIN cambiar el comportamiento del listado. Click en
+celda vacía: nada.
+
+**Filtros.** Admin: selector de profesional (reusa la carga de
+`/api/admin/usuarios` del listado). Profesional: ninguno.
+
+**Mobile (<768px).** No se renderiza la grilla multi-columna. Vista de un día
+con una tira de pills de los días visibles arriba; mismo fetch semanal, mismos
+buckets. Día por default: hoy si cae en la semana mostrada, si no lunes.
+
+**Algoritmo de referencia (función pura):**
+
+```ts
+const TZ = 'America/Argentina/Buenos_Aires';
+const OCULTOS = new Set<EstadoTurno>(['rechazado', 'cancelado']);
+const HORA_MIN = 8;
+const HORA_MAX = 20; // última fila
+
+type Agenda = {
+  dias: DateTime[];                        // columnas
+  horas: number[];                         // filas
+  celdas: Map<string, TurnoPanelLista[]>;  // key `${isoDate}|${hora}`
+};
+
+function construirAgenda(turnos: TurnoPanelLista[], lunes: DateTime): Agenda {
+  const celdas = new Map<string, TurnoPanelLista[]>();
+  let hMin = HORA_MIN, hMax = HORA_MAX, hayDomingo = false;
+
+  for (const t of turnos) {
+    if (OCULTOS.has(t.estado)) continue;
+    const ini = DateTime.fromISO(t.inicio, { zone: 'utc' }).setZone(TZ);
+    const key = `${ini.toISODate()}|${ini.hour}`;
+    const lista = celdas.get(key);
+    lista ? lista.push(t) : celdas.set(key, [t]);
+    hMin = Math.min(hMin, ini.hour);
+    hMax = Math.max(hMax, ini.hour);
+    if (ini.weekday === 7) hayDomingo = true;
+  }
+
+  return {
+    dias: Array.from({ length: hayDomingo ? 7 : 6 }, (_, i) => lunes.plus({ days: i })),
+    horas: Array.from({ length: hMax - hMin + 1 }, (_, i) => hMin + i),
+    celdas,
+  };
+}
+```
+
+`lunes` es un `DateTime` en `TZ` con `startOf('week')`, nunca calculado sobre
+UTC ni sobre el huso del browser.
+
+**Fuera de alcance (fase 2):** click en celda vacía ⇒ "Nuevo turno"
+precargado con día/hora; bloques proporcionales a la duración; línea de hora
+actual; sombreado de excepciones/feriados; toggle para ver cancelados;
+refresco automático o polling.
+
+---
+
+### 2026-09-29 (Claude Code) — Implementación: Agenda semanal (panel, ambos roles, §4.14)
+
+Implementa §4.14 tal cual está cerrada. SOLO `client/`: no se tocó `server/`,
+`shared/` ni `modelo-datos-turnos.md`. Sin endpoint nuevo — un solo
+`GET /api/turnos` por semana (§15.6). `TurnoPanelLista` se sigue importando de
+`routes/turnos/types.ts` (el pendiente de mover los shapes a `@shared` sigue
+abierto, §4.4).
+
+**1. Refactor del drawer de detalle (sin cambio de comportamiento).**
+- Nuevo `client/src/routes/turnos/useDetalleTurno.ts`: hook con la
+  orquestación que antes vivía inline en `TurnosPage` — estado del drawer,
+  `GET /api/turnos/:id`, `ocupados`, y `ejecutarAccion` (refetch de la vista +
+  relectura del detalle si está abierto, sin optimismo, 409 `ESTADO_INVALIDO`
+  con el mismo toast "Este turno ya cambió de estado — actualizando."). Recibe
+  por parámetro el refetch de la vista (`cargarTurnos` en el listado,
+  `cargarSemana` en la agenda). `mensajeError` se movió al mismo archivo y se
+  exporta (lo usan ambas páginas).
+- Nuevo `client/src/routes/turnos/components/DrawerDetalleTurno.tsx`: el
+  `<Drawer>` + `DetalleTurno` + `AccionesTurno`, mismo markup que había en
+  `TurnosPage`. Importa `TurnosPage.css` para que el contenido del drawer quede
+  estilado también fuera de `/turnos`.
+- `TurnosPage.tsx`: reemplaza el bloque inline por el hook + componente. El
+  código movido es el mismo, línea por línea (las closures siguen leyendo
+  `turnoAbiertoId` y el refetch vigentes al momento de la acción, igual que
+  antes). Verificado por lectura + typecheck; la prueba real es el bloque G
+  del guión de abajo.
+
+**2. `construirAgenda` (función pura).** `client/src/routes/agenda/agenda.ts`:
+el algoritmo de referencia de §4.14 sin cambios de lógica (`HORA_MIN`/
+`HORA_MAX`/`OCULTOS`, key `${isoDate}|${hora}` vía `claveCelda`), usando
+`TIMEZONE_CENTRO` de `lib/format/fecha.ts`. Además `lunesDeSemana(param)`:
+acepta sólo `YYYY-MM-DD` válido en el huso del centro y normaliza con
+`startOf('week')`; ausente/inválido ⇒ semana actual (en el huso del centro,
+no el del browser).
+- `client/` NO tiene Vitest ⇒ no se agregó (restricción del encargo). Se
+  verificó con un script descartable (fuera del repo, corrido con `tsx`) con
+  14 aserciones: bucket por hora local (14:30 → celda 14, orden del server
+  preservado), ocultamiento de rechazado/cancelado (incluido que un
+  cancelado fuera de 08–20 o en domingo NO expande), expansión 06–22,
+  domingo condicional, turno 23:30 local (= 02:30Z del día siguiente) en la
+  celda `día|23` local, 23:30 de domingo que en UTC ya es lunes, y
+  normalización de `?semana=` (miércoles/domingo → lunes, basura y
+  `2026-02-31` → semana actual). Pasó con el proceso en `TZ=Asia/Tokyo` y
+  en `TZ=UTC` (independiente del huso del host). Si algún día se agrega
+  Vitest a `client/`, esos casos son los candidatos directos.
+
+**3. Ruta y nav.** `/agenda` en `App.tsx` (dentro de `RequireSesion` +
+`PanelLayout`, sin `RequireRol`: ambos roles). Ítem "Agenda" en `layout/nav.ts`
+debajo de "Turnos", sin `rolesPermitidos`. Ícono nuevo `agenda` en
+`NavIcon.tsx` (no hay mockup: calendario con grilla de semana, mismo trazo
+que el de turnos). La landing post-login sigue siendo `/turnos`. Semana en
+`?semana=YYYY-MM-DD`: si el param viene y no es el lunes normalizado, se
+reescribe con `replace` (no ensucia el historial). "Hoy" borra el param;
+anterior/siguiente escriben el lunes correspondiente. Sin clamp.
+
+**4. Grilla desktop, chip y filtro.** `routes/agenda/AgendaPage.tsx`,
+`ChipAgenda.tsx`, `AgendaPage.css`.
+- Fetch: `desde = inicioDiaLocalUtc(lunes)`, `hasta = finDiaLocalUtc(domingo)`,
+  sin `estado`, `profesionalId` sólo si el admin filtró.
+- Grilla CSS grid: columna de horas (56px) + una por día (`minmax(128px,1fr)`),
+  con scroll horizontal dentro de la card si no entra. Columna de hoy
+  resaltada (papel + subrayado tinta en el encabezado).
+- Chip: `HH:mm–HH:mm · clienta` (+ `· nombre corto` de la profesional si es
+  admin sin filtro; "nombre corto" = primera palabra de `profesional.nombre`),
+  una línea con ellipsis y el texto completo en `title`. Color con los tokens
+  de badge de §3. `fueraDeHorario`: mismo `.flag` "fuera de horario" que la
+  fila del listado, en una segunda línea del chip para no comerle ancho al
+  texto. Sin chip de urgencia.
+- Filtro admin: mismo `api.listarProfesionales()` que el listado. Profesional:
+  sin filtro.
+- Respuestas viejas: cada fetch se etiqueta con `semana|filtro`; si la
+  navegación ya cambió de semana/filtro, la respuesta vieja se descarta (no
+  pisa la grilla actual). Mientras la semana/filtro cambia se muestra
+  "Cargando agenda…"; el refetch post-acción (misma clave) NO hace parpadear
+  la grilla.
+
+**5. Mobile (<768px).** `matchMedia('(max-width: 767px)')`, reactivo al
+resize. Tira de pills con los días visibles (incluye domingo sólo si la regla
+lo agrega) + un día con las mismas filas de horas y los mismos buckets; mismo
+fetch semanal. Día por default: hoy si cae en la semana, si no lunes; al
+cambiar de semana se vuelve al default. Si el día elegido deja de estar
+visible (p. ej. se cancela el único turno del domingo) cae al lunes.
+
+**Hallazgos / descartado:**
+- Heredado, NO corregido (fuera de alcance, ya anotado en 2026-09-19 y
+  2026-09-22): `listarProfesionales` (`routes/turnos/api.ts`) filtra
+  `rol==='profesional'`, así que Camila (admin con `atiende:true`) no aparece
+  en el filtro de la agenda — igual que en el listado. Sus turnos SÍ se ven en
+  la vista "Todas las profesionales". Se arregla junto con el del listado,
+  mismo origen.
+- La agenda reusa clases de `TurnosPage.css` (`.filtro-profesional`, `.flag`,
+  `turnos-page__vacio/aviso`), que llega cargada vía `DrawerDetalleTurno`.
+  Se prefirió eso a duplicar reglas.
+- Descartado: `position: sticky` en los encabezados de día — dentro del
+  contenedor con `overflow-x` no tiene efecto (el scroll vertical es de la
+  página).
+- El texto de §4.14 termina en "Fuera de alcance (fase 2): … toggle para ver
+  cancelados;" + "refresco automático o polling." en la línea siguiente, que
+  parece cortado o mal unido. No se editó (append-only); revisar en la sesión
+  de arquitectura si falta texto.
+
+**Sin contradicciones** contra §1–§16 ni contra §4.14.
+
+**Verificación:** `npm run typecheck` limpio (shared, server, client,
+client-publico). `vite build` de `client` OK (a un directorio temporal; el
+warning de chunk >500 kB ya existía). Tests: `shared` 10/10; `server` 152/152
+corrido con `--no-file-parallelism` — en paralelo fallaron 1 y luego 3 tests
+DISTINTOS en cada corrida, todos por el timeout de 5 s de Vitest bajo carga
+(MongoMemoryReplSet), sin relación con este cambio (no toca `server/`). No se
+tocó el conteo de §14 (`client/` sigue sin test runner). No se recorrió la UI
+en un browser desde esta sesión ⇒ el guión de abajo es la barra real.
+
+#### Guión de prueba manual
+
+Datos previos (con el panel de `/turnos` o Mongo): en la semana actual, al
+menos un turno por estado visible (pendiente, confirmado, completado,
+ausente), uno rechazado y uno cancelado; dos profesionales con turnos en la
+misma celda; un turno cargado con "fuera del horario habitual" a las 07:00 o a
+las 21:30; un turno en domingo. Otro turno la semana siguiente.
+
+A. **Admin sin filtro.** Loguearse como admin ⇒ la landing sigue siendo
+   `/turnos`. En la sidebar aparece "Agenda" debajo de "Turnos" → click.
+   - URL `/agenda` sin param; título "Agenda", subtítulo "Semana del … al …".
+   - Columnas Lun–Sáb (+ Dom sólo por el turno del domingo). Columna de hoy
+     resaltada.
+   - Filas desde 08:00 hasta 20:00, expandidas hasta la hora del turno fuera
+     de horario (p. ej. arrancan en 07:00 o terminan en 21:00).
+   - Chips `HH:mm–HH:mm · Clienta · Profesional`, color por estado igual que
+     los badges del listado. Rechazado y cancelado NO aparecen. Un turno de
+     14:30 está en la fila de 14:00. Dos turnos en la misma celda se apilan
+     por hora de inicio. Hover sobre un chip truncado ⇒ tooltip con el texto
+     completo. El turno fuera de horario lleva la marca "fuera de horario".
+B. **Admin con filtro.** Elegir una profesional ⇒ sólo sus turnos, y el chip
+   pierde el sufijo con el nombre. Volver a "Todas" ⇒ vuelve el sufijo.
+C. **Profesional.** Loguearse como profesional ⇒ ítem "Agenda" visible, sin
+   selector de profesional, sólo sus turnos, chips sin sufijo.
+D. **Navegación de semanas.** "Siguiente →" ⇒ URL `?semana=<lunes siguiente>`,
+   se ve el turno de la semana siguiente; el domingo desaparece si esa semana
+   no tiene turnos ese día. "← Anterior" dos veces ⇒ semana pasada (sin
+   clamp). "Hoy" ⇒ URL sin param, semana actual. Escribir a mano
+   `/agenda?semana=<un miércoles>` ⇒ la URL se reescribe al lunes de esa
+   semana. `/agenda?semana=basura` ⇒ semana actual. Atrás del browser
+   recorre las semanas visitadas. Tocar anterior/siguiente muy rápido ⇒
+   termina mostrando la semana de la URL, no una intermedia.
+E. **Acciones desde el drawer.** Click en un chip pendiente ⇒ se abre el MISMO
+   drawer del listado (código en el título, detalle, historial). "Aprobar" ⇒
+   toast "Turno aprobado.", el chip pasa a verde sin cerrar el drawer y el
+   drawer muestra confirmado. Sobre un confirmado: "Cancelar" con motivo ⇒
+   toast "Turno cancelado.", el chip DESAPARECE de la grilla, el drawer
+   sigue abierto mostrando cancelado. Si era el único turno del domingo, la
+   columna domingo desaparece. 409: abrir el mismo turno pendiente en dos
+   pestañas, aprobar en una y rechazar en la otra ⇒ toast "Este turno ya
+   cambió de estado — actualizando." y la grilla refleja el estado real.
+   Click en una celda vacía ⇒ no pasa nada.
+F. **Mobile.** DevTools, viewport iPhone (390×844). En la agenda no hay
+   grilla de columnas: tira de pills Lun…Sáb (+Dom si corresponde), con hoy
+   seleccionado si la semana es la actual (en otra semana, lunes). Tocar una
+   pill ⇒ muestra ese día, mismas filas de horas y mismos chips. Navegar de
+   semana ⇒ vuelve al día por default. Tocar un chip ⇒ drawer con acciones.
+   Pasar a desktop sin recargar ⇒ vuelve la grilla.
+G. **No-regresión de /turnos (refactor del paso 1).** En `/turnos`: abrir el
+   detalle de una fila ⇒ drawer igual que antes. Aprobar/Rechazar inline en
+   una fila pendiente (botones deshabilitados mientras corre) ⇒ toast y lista
+   refrescada. Desde el drawer: aprobar, rechazar, cancelar con motivo (el
+   motivo aparece en el historial), marcar ausente ⇒ toast + drawer y lista
+   actualizados. Repetir el caso 409 con dos pestañas. Cerrar el drawer con
+   la X / Escape. "Nuevo turno" sigue creando un confirmado y el toast de
+   éxito aparece. Filtros de estado, fechas y profesional siguen andando.

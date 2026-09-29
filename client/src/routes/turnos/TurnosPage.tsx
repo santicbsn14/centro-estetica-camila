@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CrearTurnoInput } from '@shared/schemas/turno.schema';
-import { Button, Drawer, useToast } from '../../components/ui';
+import { Button, useToast } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { HttpError } from '../../lib/http';
 import { agruparPorDiaLocal, finDiaLocalUtc, hoyLocalISODate, inicioDiaLocalUtc, sumarDiasISODate } from '../../lib/format/fecha';
 import * as api from './api';
-import { AccionesTurno } from './components/AccionesTurno';
-import { DetalleTurno } from './components/DetalleTurno';
+import { DrawerDetalleTurno } from './components/DrawerDetalleTurno';
 import { FilaTurno } from './components/FilaTurno';
 import { NuevoTurnoDrawer } from './components/NuevoTurnoDrawer';
 import {
@@ -15,9 +14,9 @@ import {
   type ProfesionalFiltro,
   type ResultadoCrearTurno,
   type SlotDisponible,
-  type TurnoPanel,
   type TurnoPanelLista,
 } from './types';
+import { mensajeError, useDetalleTurno } from './useDetalleTurno';
 import './TurnosPage.css';
 
 const RANGO_DEFAULT_DIAS = 30;
@@ -31,16 +30,6 @@ const ETIQUETA_SEGMENTO: Record<FiltroEstado, string> = {
   completado: 'Completados',
   ausente: 'Ausentes',
 };
-
-// Mensaje mapeado por `codigo` (nunca por texto, frontend.md §2). El resto de
-// códigos que puede devolver una transición (403 SIN_PERMISO, 404, etc.) cae
-// en el mensaje que ya trae el HttpError — son casos que no deberían pasar
-// desde una fila que el propio listado mostró, así que no ameritan copy
-// dedicado.
-function mensajeError(err: unknown): string {
-  if (err instanceof HttpError) return err.message;
-  return 'Ocurrió un error inesperado. Probá de nuevo en unos segundos.';
-}
 
 export function TurnosPage() {
   const { usuario } = useAuth();
@@ -56,13 +45,6 @@ export function TurnosPage() {
   const [turnos, setTurnos] = useState<TurnoPanelLista[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const [turnoAbiertoId, setTurnoAbiertoId] = useState<string | null>(null);
-  const [detalle, setDetalle] = useState<TurnoPanel | null>(null);
-  const [detalleCargando, setDetalleCargando] = useState(false);
-  const [detalleError, setDetalleError] = useState<string | null>(null);
-
-  const [ocupados, setOcupados] = useState<Set<string>>(new Set());
 
   // Alta manual — "Nuevo turno" (frontend.md §4.4). Visible para AMBOS roles.
   const [nuevoTurnoAbierto, setNuevoTurnoAbierto] = useState(false);
@@ -104,63 +86,11 @@ export function TurnosPage() {
     cargarTurnos();
   }, [cargarTurnos]);
 
-  const cargarDetalle = useCallback(async (id: string) => {
-    setDetalleCargando(true);
-    setDetalleError(null);
-    try {
-      const data = await api.obtenerTurno(id);
-      setDetalle(data);
-    } catch (err) {
-      setDetalleError(mensajeError(err));
-    } finally {
-      setDetalleCargando(false);
-    }
-  }, []);
-
-  function abrirDetalle(id: string) {
-    setTurnoAbiertoId(id);
-    setDetalle(null);
-    cargarDetalle(id);
-  }
-
-  function cerrarDetalle() {
-    setTurnoAbiertoId(null);
-    setDetalle(null);
-    setDetalleError(null);
-  }
-
-  // Toda transición pasa por acá: refresca lista + detalle (si está abierto)
-  // en vez de asumir éxito y parchear el estado local (frontend.md §4.4,
-  // PENDIENTE de impl: "manejar 409 ESTADO_INVALIDO → releer y avisar, no
-  // asumir éxito"). El 409 y el éxito terminan en el mismo lugar: una
-  // relectura real. La diferencia es sólo el toast.
-  async function ejecutarAccion(id: string, accion: () => Promise<TurnoPanel>, mensajeExito: string) {
-    setOcupados((actual) => new Set(actual).add(id));
-    try {
-      await accion();
-      mostrarToast(mensajeExito, 'exito');
-    } catch (err) {
-      if (err instanceof HttpError && err.status === 409 && err.codigo === 'ESTADO_INVALIDO') {
-        mostrarToast('Este turno ya cambió de estado — actualizando.', 'info');
-      } else {
-        mostrarToast(mensajeError(err), 'error');
-      }
-    } finally {
-      setOcupados((actual) => {
-        const siguiente = new Set(actual);
-        siguiente.delete(id);
-        return siguiente;
-      });
-      await cargarTurnos();
-      if (turnoAbiertoId === id) await cargarDetalle(id);
-    }
-  }
-
-  const aprobar = (id: string) => ejecutarAccion(id, () => api.aprobarTurno(id), 'Turno aprobado.');
-  const rechazar = (id: string) => ejecutarAccion(id, () => api.rechazarTurno(id), 'Turno rechazado.');
-  const ausente = (id: string) => ejecutarAccion(id, () => api.marcarAusente(id), 'Turno marcado como ausente.');
-  const cancelar = (id: string, motivo?: string) =>
-    ejecutarAccion(id, () => api.cancelarTurno(id, motivo), 'Turno cancelado.');
+  // Drawer de detalle + transiciones (aprobar/rechazar/cancelar/ausente, con
+  // refetch y manejo de 409 ESTADO_INVALIDO) — compartido con la agenda
+  // semanal (frontend.md §4.14). Al terminar cada acción relee el listado.
+  const detalleTurno = useDetalleTurno(cargarTurnos);
+  const { ocupados, abrirDetalle, aprobar, rechazar } = detalleTurno;
 
   // Alta manual (frontend.md §4.4): MISMO POST /api/turnos público — el server
   // deriva origen:'admin' de la sesión, nace CONFIRMADO directo (un solo
@@ -301,32 +231,7 @@ export function TurnosPage() {
         ))
       )}
 
-      <Drawer
-        abierto={turnoAbiertoId !== null}
-        onCerrar={cerrarDetalle}
-        titulo={detalle?.codigo}
-        footer={
-          detalle ? (
-            <AccionesTurno
-              estado={detalle.estado}
-              ocupado={ocupados.has(detalle.id)}
-              onAprobar={() => aprobar(detalle.id)}
-              onRechazar={() => rechazar(detalle.id)}
-              onCancelar={(motivo) => cancelar(detalle.id, motivo)}
-              onAusente={() => ausente(detalle.id)}
-            />
-          ) : undefined
-        }
-      >
-        {detalleCargando ? (
-          <p className="turnos-page__vacio">Cargando…</p>
-        ) : detalleError ? (
-          <p className="turnos-page__aviso turnos-page__aviso--error">{detalleError}</p>
-        ) : detalle ? (
-          <DetalleTurno turno={detalle} />
-        ) : null}
-      </Drawer>
-
+      <DrawerDetalleTurno control={detalleTurno} />
       {nuevoTurnoAbierto ? (
         <NuevoTurnoDrawer
           guardando={creandoTurno}
