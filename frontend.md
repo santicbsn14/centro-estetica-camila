@@ -4364,3 +4364,61 @@ G. **No-regresión de /turnos (refactor del paso 1).** En `/turnos`: abrir el
    actualizados. Repetir el caso 409 con dos pestañas. Cerrar el drawer con
    la X / Escape. "Nuevo turno" sigue creando un confirmado y el toast de
    éxito aparece. Filtros de estado, fechas y profesional siguen andando.
+
+### 2026-11-05 — Catálogo público: categoría MAQUILLAJE Y PEINADO + vaciado de "Otros" — DECISIÓN CERRADA
+Amplía "Categorización visual de servicios en catálogo público" y
+"categorías desplegables". No reabre nada: sigue el mapeo hardcodeado en
+constants.ts. Pedido de Camila (2026-11-03).
+- Categoría nueva MAQUILLAJE Y PEINADO (wording de Camila), al final del
+  orden fijo (después de MASAJES, antes de Otros), con el mismo
+  comportamiento desplegable.
+- Mapeo: Maquillaje social y Peinados → MAQUILLAJE Y PEINADO. Limpieza
+  facial profunda, Limpieza + Dermapen, Dermaplaning y Hydralips →
+  TRATAMIENTOS FACIALES.
+- "Otros" queda vacío y no se renderiza. El fallback se mantiene.
+- Riesgo vigente (ya aceptado): cada alta o renombre nuevo cae en "Otros"
+  hasta un deploy. Camila va a cargar más servicios ⇒ pendiente mover la
+  categoría al modelo (diseño cerrado en el chat, implementación a
+  decidir).
+
+### 2026-11-05 (Claude Code) — Implementación: categoría MAQUILLAJE Y PEINADO + vaciado de "Otros" (client-publico)
+
+Implementa la entrada anterior. Sin contradicciones con §1–16 ni con el resto
+de este archivo.
+
+**Archivos tocados:** `client-publico/src/routes/reserva/constants.ts`.
+**NO se tocó:** `Catalogo.tsx`, `ServicioCard.tsx`, CSS, `@shared`, `server/`,
+`client/` (panel).
+
+**Qué se hizo**
+- `CATEGORIAS_SERVICIO`: se agregó `'MAQUILLAJE Y PEINADO'` después de
+  `'MASAJES'`. `Catalogo.tsx` ya arma el orden con
+  `[...CATEGORIAS_SERVICIO, CATEGORIA_FALLBACK]` y saltea los buckets vacíos
+  (`if (!lista) return null`) ⇒ la categoría nueva aparece y "Otros" deja de
+  renderizarse sin tocar el componente.
+- `NOMBRE_A_CATEGORIA`: 4 claves nuevas al bloque de TRATAMIENTOS FACIALES
+  (`'limpieza facial profunda'`, `'limpieza + dermapen'`, `dermaplaning`,
+  `hydralips`) y bloque nuevo con `'maquillaje social'` y `peinados` →
+  MAQUILLAJE Y PEINADO. Mismo formato que las existentes (claves sin comillas
+  cuando son un identificador válido, como `retirados`).
+- Pre-chequeo: GET `https://api.camilagonzalezbelleza.com/api/servicios`
+  (prod, 21 servicios activos). Los 6 nombres matchean exacto tras
+  `.trim().toLowerCase()` (sin espacios dobles; tildes y `+` iguales).
+  Ninguna de las 6 claves existía en otra categoría.
+
+**Verificación**
+- `npm run typecheck` (todos los paquetes) OK; `npm run build
+  --workspace=client-publico` OK.
+- Agrupado contra prod: script `tsx` descartable (fuera del repo) que importa
+  el `categoriaDe` real y reproduce el bucketing de `Catalogo.tsx` sobre la
+  respuesta de prod. Resultado: UÑAS 6, CEJAS 2, PESTAÑAS 2, TRATAMIENTOS
+  FACIALES 7 (3 previas + las 4 nuevas), MASAJES 2, MAQUILLAJE Y PEINADO 2
+  (último), "Otros" vacío ⇒ no se renderiza.
+- Chequeo visual en navegador (dev con `.env.local` → prod): pendiente de
+  hacer a mano; no se creó `.env.local`.
+
+**Hallazgo (NO se tocó, fuera de alcance):** la clave
+`'limpieza profunda + espátula ultrasónica'` ya no corresponde a ningún
+servicio de prod (probablemente es el que se renombró a "Limpieza facial
+profunda"). Es una entrada muerta e inofensiva; se puede borrar en una tarea
+futura.

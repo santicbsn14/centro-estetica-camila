@@ -12,6 +12,7 @@ export const CATEGORIAS_SERVICIO = [
   'PESTAÑAS',
   'TRATAMIENTOS FACIALES',
   'MASAJES',
+  'MAQUILLAJE Y PEINADO',
 ] as const;
 
 export type CategoriaServicio = (typeof CATEGORIAS_SERVICIO)[number];
@@ -36,9 +37,16 @@ const NOMBRE_A_CATEGORIA: Record<string, CategoriaServicio> = {
   'limpieza profunda + peeling químico + masaje anti age': 'TRATAMIENTOS FACIALES',
   'limpieza profunda + electroporador + espátula ultrasónica': 'TRATAMIENTOS FACIALES',
   'limpieza profunda + máscara led y máscara gold': 'TRATAMIENTOS FACIALES',
+  'limpieza facial profunda': 'TRATAMIENTOS FACIALES',
+  'limpieza + dermapen': 'TRATAMIENTOS FACIALES',
+  dermaplaning: 'TRATAMIENTOS FACIALES',
+  hydralips: 'TRATAMIENTOS FACIALES',
 
   'reflexología podal': 'MASAJES',
   'reflexología podal opción 2': 'MASAJES',
+
+  'maquillaje social': 'MAQUILLAJE Y PEINADO',
+  peinados: 'MAQUILLAJE Y PEINADO',
 };
 
 export function categoriaDe(nombreServicio: string): CategoriaServicio | typeof CATEGORIA_FALLBACK {
