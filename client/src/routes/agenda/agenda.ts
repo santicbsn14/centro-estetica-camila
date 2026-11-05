@@ -29,13 +29,18 @@ export function claveCelda(dia: DateTime, hora: number): string {
  * manda por `inicio` asc, §15.6 — no se reordena).
  *
  * `lunes` es un DateTime en el huso del centro con startOf('week') (ver
- * lunesDeSemana).
+ * lunesDeSemana). `forzarDomingo` agrega la columna de domingo aunque esté
+ * vacía (el "Ir a fecha" eligió un domingo — entrada 2026-11-05).
  */
-export function construirAgenda(turnos: TurnoPanelLista[], lunes: DateTime): Agenda {
+export function construirAgenda(
+  turnos: TurnoPanelLista[],
+  lunes: DateTime,
+  opciones: { forzarDomingo?: boolean } = {}
+): Agenda {
   const celdas = new Map<string, TurnoPanelLista[]>();
   let hMin = HORA_MIN;
   let hMax = HORA_MAX;
-  let hayDomingo = false;
+  let hayDomingo = opciones.forzarDomingo ?? false;
 
   for (const t of turnos) {
     if (OCULTOS.has(t.estado)) continue;
@@ -68,4 +73,30 @@ export function lunesDeSemana(param: string | null, ahora: DateTime = DateTime.n
     param && RE_ISO_DATE.test(param) ? DateTime.fromISO(param, { zone: TIMEZONE_CENTRO }) : null;
   const dia = base && base.isValid ? base : ahora.setZone(TIMEZONE_CENTRO);
   return dia.startOf('week');
+}
+
+/**
+ * Día elegido con "Ir a fecha" (`?dia=YYYY-MM-DD`, entrada 2026-11-05).
+ * Inválido o fuera de la semana de `lunes` ⇒ null (se ignora).
+ */
+export function diaDeParam(param: string | null, lunes: DateTime): DateTime | null {
+  if (!param || !RE_ISO_DATE.test(param)) return null;
+  const dia = DateTime.fromISO(param, { zone: TIMEZONE_CENTRO });
+  if (!dia.isValid) return null;
+  return dia >= lunes && dia < lunes.plus({ weeks: 1 }) ? dia : null;
+}
+
+const MARGEN_ANIOS = 5;
+
+/**
+ * Guard del "Ir a fecha": el onChange del date nativo dispara por cada
+ * segmento tipeado del año ("0002", "0020", "0202"…). Sólo se navega con una
+ * fecha válida cuyo año esté en [año actual − 5, año actual + 5].
+ */
+export function fechaNavegable(valor: string, ahora: DateTime = DateTime.now()): DateTime | null {
+  if (!RE_ISO_DATE.test(valor)) return null;
+  const dia = DateTime.fromISO(valor, { zone: TIMEZONE_CENTRO });
+  if (!dia.isValid) return null;
+  const anio = ahora.setZone(TIMEZONE_CENTRO).year;
+  return Math.abs(dia.year - anio) <= MARGEN_ANIOS ? dia : null;
 }

@@ -8,7 +8,7 @@ import * as api from '../turnos/api';
 import { DrawerDetalleTurno } from '../turnos/components/DrawerDetalleTurno';
 import type { ProfesionalFiltro, TurnoPanelLista } from '../turnos/types';
 import { mensajeError, useDetalleTurno } from '../turnos/useDetalleTurno';
-import { claveCelda, construirAgenda, lunesDeSemana } from './agenda';
+import { claveCelda, construirAgenda, diaDeParam, fechaNavegable, lunesDeSemana } from './agenda';
 import { ChipAgenda } from './ChipAgenda';
 import './AgendaPage.css';
 
@@ -43,6 +43,10 @@ function etiquetaSemana(lunes: DateTime): string {
   return `Semana del ${desde} al ${domingo.setLocale('es').toFormat('d LLL yyyy')}`;
 }
 
+function etiquetaDiaLarga(dia: DateTime): string {
+  return dia.setLocale('es').toFormat("cccc d 'de' LLLL");
+}
+
 // Agenda semanal (frontend.md §4.14): grilla día × hora de consulta, ambos
 // roles. Un solo GET /api/turnos por semana; el ownership de la profesional lo
 // fuerza el server. Click en chip ⇒ el mismo drawer de detalle del listado.
@@ -64,8 +68,32 @@ export function AgendaPage() {
     }
   }, [paramSemana, lunesISO, setSearchParams]);
 
+  // "Ir a fecha" (entrada 2026-11-05): ?dia= sólo vale dentro de la semana.
+  const diaSel = useMemo(() => diaDeParam(searchParams.get('dia'), lunes), [searchParams, lunes]);
+  const diaSelISO = diaSel ? (diaSel.toISODate() as string) : null;
+
+  // Anterior / Hoy / Siguiente → limpian `dia`.
   function irASemana(semana: DateTime | null) {
     setSearchParams(semana ? { semana: semana.toISODate() as string } : {});
+  }
+
+  // Arma semana y dia ya normalizados ⇒ el efecto de arriba no corre y no se
+  // pierde `dia`. Push: el "atrás" del browser vuelve.
+  function irAFecha(dia: DateTime) {
+    const iso = dia.toISODate() as string;
+    setSearchParams({ semana: lunesDeSemana(iso).toISODate() as string, dia: iso });
+  }
+
+  // Estado local del input: si fuera controlado por `diaSelISO`, React
+  // revertiría cada segmento rechazado por el guard y no se podría tipear el
+  // año a mano.
+  const [valorFecha, setValorFecha] = useState(diaSelISO ?? '');
+  useEffect(() => setValorFecha(diaSelISO ?? ''), [diaSelISO]);
+
+  function onCambioFecha(valor: string) {
+    setValorFecha(valor);
+    const dia = fechaNavegable(valor);
+    if (dia && dia.toISODate() !== diaSelISO) irAFecha(dia);
   }
 
   const [profesionalId, setProfesionalId] = useState('');
@@ -110,22 +138,38 @@ export function AgendaPage() {
   const detalleTurno = useDetalleTurno(cargarSemana);
 
   const turnosSemana = datos?.clave === claveConsulta ? datos.turnos : null;
+  // Si el día elegido es domingo se fuerza su columna (sin turnos no existiría).
+  const forzarDomingo = diaSel?.weekday === 7;
   const agenda = useMemo(
-    () => (turnosSemana ? construirAgenda(turnosSemana, lunes) : null),
-    [turnosSemana, lunes]
+    () => (turnosSemana ? construirAgenda(turnosSemana, lunes, { forzarDomingo }) : null),
+    [turnosSemana, lunes, forzarDomingo]
   );
+
+  // Turnos visibles del día elegido: los de la grilla (ya sin
+  // rechazado/cancelado y con el filtro de profesional del GET).
+  const cantDiaSel =
+    agenda && diaSel
+      ? agenda.horas.reduce((n, h) => n + (agenda.celdas.get(claveCelda(diaSel, h))?.length ?? 0), 0)
+      : null;
 
   const hoyISO = hoyLocalISODate();
   const mostrarProfesional = esAdmin && !profesionalId;
 
-  // Mobile: un día a la vez. Default: hoy si cae en la semana, si no lunes.
+  // Mobile: un día a la vez. Default: día elegido → hoy si cae en la semana → lunes.
   const [diaMobileISO, setDiaMobileISO] = useState<string | null>(null);
-  useEffect(() => setDiaMobileISO(null), [lunesISO]);
-  const diaDefault = hoyISO >= lunesISO && hoyISO <= domingoISO ? hoyISO : lunesISO;
+  useEffect(() => setDiaMobileISO(null), [lunesISO, diaSelISO]);
+  const diaDefault = diaSelISO ?? (hoyISO >= lunesISO && hoyISO <= domingoISO ? hoyISO : lunesISO);
   const diaMobile =
     agenda?.dias.find((d) => d.toISODate() === (diaMobileISO ?? diaDefault)) ?? agenda?.dias[0] ?? null;
 
   if (!usuario) return null;
+
+  function clasesDia(base: string, dia: DateTime): string {
+    const iso = dia.toISODate();
+    return [base, iso === hoyISO ? 'is-hoy' : '', iso === diaSelISO ? 'is-elegido' : '']
+      .filter(Boolean)
+      .join(' ');
+  }
 
   function renderChips(dia: DateTime, hora: number) {
     const turnos = agenda?.celdas.get(claveCelda(dia, hora));
@@ -155,6 +199,10 @@ export function AgendaPage() {
           <Button variant="secondary" size="sm" onClick={() => irASemana(lunes.plus({ weeks: 1 }))}>
             Siguiente →
           </Button>
+          <label className="agenda-page__ir-fecha">
+            <span>Ir a fecha</span>
+            <input type="date" value={valorFecha} onChange={(e) => onCambioFecha(e.target.value)} />
+          </label>
         </div>
 
         {esAdmin ? (
@@ -172,6 +220,27 @@ export function AgendaPage() {
           </label>
         ) : null}
       </div>
+
+      {diaSel ? (
+        <div className="agenda-page__banner" role="status">
+          <span>
+            Mostrando: <strong>{etiquetaDiaLarga(diaSel)}</strong>
+            {cantDiaSel === null
+              ? null
+              : cantDiaSel === 0
+                ? ' · Sin turnos agendados'
+                : ` · ${cantDiaSel} ${cantDiaSel === 1 ? 'turno' : 'turnos'}`}
+          </span>
+          <button
+            type="button"
+            className="agenda-page__banner-cerrar"
+            aria-label="Quitar día elegido"
+            onClick={() => setSearchParams({ semana: lunesISO })}
+          >
+            ✕
+          </button>
+        </div>
+      ) : null}
 
       {error ? (
         <div className="turnos-page__aviso turnos-page__aviso--error">{error}</div>
@@ -220,10 +289,7 @@ export function AgendaPage() {
           >
             <div className="agenda-grilla__esquina" />
             {agenda.dias.map((dia) => (
-              <div
-                key={dia.toISODate()}
-                className={`agenda-grilla__dia${dia.toISODate() === hoyISO ? ' is-hoy' : ''}`}
-              >
+              <div key={dia.toISODate()} className={clasesDia('agenda-grilla__dia', dia)}>
                 {etiquetaDiaCorta(dia)}
               </div>
             ))}
@@ -231,10 +297,7 @@ export function AgendaPage() {
               <div className="agenda-grilla__fila" key={hora}>
                 <div className="agenda-grilla__hora num">{etiquetaHora(hora)}</div>
                 {agenda.dias.map((dia) => (
-                  <div
-                    key={dia.toISODate()}
-                    className={`agenda-grilla__celda${dia.toISODate() === hoyISO ? ' is-hoy' : ''}`}
-                  >
+                  <div key={dia.toISODate()} className={clasesDia('agenda-grilla__celda', dia)}>
                     {renderChips(dia, hora)}
                   </div>
                 ))}

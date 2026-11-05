@@ -32,7 +32,67 @@
 
 .agenda-page__nav-semana {
   display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
   gap: 0.4rem;
+}
+
+/* "Ir a fecha" (entrada 2026-11-05) — mismo lenguaje que .filtro-fecha. */
+.agenda-page__ir-fecha {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-left: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--color-tinta-48);
+}
+
+.agenda-page__ir-fecha input {
+  border: var(--borde-hairline-fuerte);
+  border-radius: var(--radio-control);
+  padding: 0.4rem 0.6rem;
+  font-family: var(--fuente-ui);
+  font-size: 0.85rem;
+  background: var(--color-blanco);
+  color: var(--color-tinta);
+}
+
+.agenda-page__banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  margin: -0.6rem 0 1rem;
+  padding: 0.55rem 0.6rem 0.55rem 0.9rem;
+  background: var(--color-blanco);
+  border: var(--borde-hairline-fuerte);
+  border-left: 3px solid var(--color-tinta);
+  border-radius: var(--radio-control);
+  font-size: 0.85rem;
+  color: var(--color-tinta-72);
+}
+
+.agenda-page__banner strong {
+  color: var(--color-tinta);
+  font-weight: 600;
+}
+
+.agenda-page__banner-cerrar {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--color-tinta-48);
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0.35rem 0.45rem;
+  border-radius: var(--radio-control);
+  cursor: pointer;
+}
+
+.agenda-page__banner-cerrar:hover,
+.agenda-page__banner-cerrar:focus-visible {
+  color: var(--color-tinta);
+  background: var(--color-papel);
 }
 
 /* Grilla desktop: columna de horas + una por día. Cada fila es
@@ -93,6 +153,21 @@
 
 .agenda-grilla__celda.is-hoy {
   background: var(--color-papel);
+}
+
+/* Día elegido con "Ir a fecha": encabezado invertido + columna enmarcada,
+   distinto del resaltado de hoy (fondo papel + subrayado). Si coinciden,
+   gana el elegido en el encabezado y las celdas suman marco al fondo papel. */
+.agenda-grilla__dia.is-elegido {
+  color: var(--color-papel);
+  background: var(--color-tinta);
+  box-shadow: none;
+}
+
+.agenda-grilla__celda.is-elegido {
+  box-shadow:
+    inset 1px 0 0 var(--color-tinta),
+    inset -1px 0 0 var(--color-tinta);
 }
 
 /* Chip de turno — color por estado, mismos tokens que .badge--*. Sin

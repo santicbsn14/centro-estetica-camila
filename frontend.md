@@ -4422,3 +4422,149 @@ de este archivo.
 servicio de prod (probablemente es el que se renombró a "Limpieza facial
 profunda"). Es una entrada muerta e inofensiva; se puede borrar en una tarea
 futura.
+
+### 2026-11-05 — Agenda: "Ir a fecha" — DECISIÓN CERRADA (amplía §4.14)
+
+Pedido de Camila: le piden turnos para fechas lejanas y hoy tiene que avanzar
+semana por semana con "Siguiente →" para ver si ese día tiene turnos. SOLO
+FRONT, sólo client/src/routes/agenda/. No toca backend, @shared,
+modelo-datos-turnos.md, NuevoTurnoDrawer ni /turnos.
+
+**Control.** <input type="date"> nativo con label "Ir a fecha", en
+.agenda-page__barra, después de "← Anterior · Hoy · Siguiente →". Sin botón
+extra: navega en onChange. Sin clamp (pasado y futuro libres, igual que §4.14).
+- Guard contra tipeo a mano: el onChange del date nativo dispara por cada
+  segmento (año "0002", "0020", "0202"…). Sólo se navega si la fecha es válida
+  (Luxon) y su año está en [año actual − 5, año actual + 5].
+
+**URL.** Param nuevo dia=YYYY-MM-DD junto a semana:
+?semana=<lunes de esa fecha>&dia=<fecha>. irAFecha arma los dos ya
+normalizados (lunes con lunesDeSemana, en America/Argentina/Buenos_Aires),
+así el efecto que normaliza semana no corre y no se pierde dia. Push (el
+"atrás" del browser vuelve). ← Anterior, Hoy y Siguiente → siguen con
+irASemana y limpian dia. dia inválido o fuera de la semana ⇒ se ignora.
+
+**Qué muestra.**
+- Desktop: la semana de esa fecha, con la columna del día elegido marcada
+  (header + celdas), distinta del resaltado de hoy (.is-hoy), con tokens de §3.
+- Mobile (<768px): el día elegido queda seleccionado en la tira de pills.
+  Default de diaMobile: dia si cae en la semana → hoy si cae → lunes.
+- Banner bajo la barra: "Mostrando: viernes 12 de diciembre · N turnos" (o
+  "Sin turnos agendados") + "✕" que saca dia y deja la semana. N = turnos
+  visibles de ese día (sin rechazado/cancelado, igual que la grilla) con el
+  filtro de profesional aplicado.
+- El input muestra dia cuando está; vacío si no.
+
+**Domingo.** La columna de domingo sólo aparece si la semana tiene turnos ese
+día (§4.14). Si dia es domingo, se fuerza: construirAgenda(turnos, lunes,
+{ forzarDomingo }). Sin esto, elegir un domingo vacío no marca nada.
+
+**Datos.** Mismo GET /api/turnos semanal de §4.14, sin request nuevo.
+
+**Riesgos / trade-offs aceptados**
+- "Sin turnos agendados" ≠ "libre": la agenda no muestra feriados, vacaciones
+  ni bloqueos (fase 2 en §4.14; excepciones es admin-only). El copy nunca dice
+  "disponible".
+- Se ven turnos ocupados, no huecos por servicio. "¿Hay lugar para X ese
+  día?" es "Nuevo turno", que también obliga a "Ver más fechas" de a 14 días.
+  Salto a fecha ahí = fase 2.
+
+**Tests.** client sin test runner ⇒ typecheck + build + guion manual.
+construirAgenda sigue pura; el parámetro nuevo es opcional.
+
+### 2026-11-05 (Claude Code) — Implementación: Agenda "Ir a fecha" (panel, amplía §4.14)
+
+Implementa la entrada anterior. Sin contradicciones con §1–16 ni con el resto
+de este archivo.
+
+**Archivos tocados:** `client/src/routes/agenda/agenda.ts`,
+`client/src/routes/agenda/AgendaPage.tsx`, `client/src/routes/agenda/AgendaPage.css`.
+**NO se tocó:** `server/`, `@shared`, `modelo-datos-turnos.md`,
+`NuevoTurnoDrawer`, `/turnos`, `ChipAgenda.tsx`.
+
+**Qué se hizo**
+- `agenda.ts`:
+  - `construirAgenda(turnos, lunes, opciones = {})` con
+    `opciones.forzarDomingo?: boolean`, que inicializa `hayDomingo`. Sigue
+    pura; las llamadas existentes no cambian.
+  - `diaDeParam(param, lunes)`: `?dia=` → `DateTime` en el huso del centro;
+    null si no matchea `YYYY-MM-DD`, si Luxon lo da inválido (`2026-02-30`) o
+    si cae fuera de `[lunes, lunes + 1 semana)`.
+  - `fechaNavegable(valor, ahora?)`: el guard de tipeo. Fecha válida y
+    `|año − año actual| ≤ 5` (año actual en el huso del centro).
+- `AgendaPage.tsx`:
+  - `diaSel` derivado de `?dia=` con `diaDeParam`. `irAFecha(dia)` hace push
+    de `{ semana: lunesDeSemana(iso), dia: iso }` ya normalizados ⇒ el efecto
+    que normaliza `semana` no corre. `irASemana` quedó igual (por eso limpia
+    `dia`). El ✕ del banner hace `setSearchParams({ semana: lunesISO })`.
+  - **Input con estado local (`valorFecha`), no controlado por `dia`.**
+    Problema encontrado: si el `value` fuera `diaSelISO`, cuando el guard
+    rechaza un segmento intermedio ("0202-12-12") React re-asigna el value
+    viejo al DOM y el año no se puede tipear a mano. Con estado local el
+    input conserva lo tipeado y sólo se resincroniza cuando cambia
+    `diaSelISO` (navegación, ✕, "atrás", Anterior/Hoy/Siguiente ⇒ vacío).
+  - `forzarDomingo = diaSel?.weekday === 7` pasado a `construirAgenda`.
+  - Banner (`role="status"`) bajo la barra: "Mostrando: <cccc d 'de' LLLL> ·
+    N turnos" / "· 1 turno" / "· Sin turnos agendados"; mientras carga la
+    semana muestra sólo la fecha. N = suma de `agenda.celdas` del día
+    elegido ⇒ mismo criterio que la grilla (sin rechazado/cancelado) y el
+    filtro de profesional ya viene aplicado por el GET.
+  - Desktop: `clasesDia()` agrega `is-elegido` a header y celdas de la
+    columna, además de `is-hoy`.
+  - Mobile: `diaDefault = diaSelISO ?? (hoy si cae en la semana, si no
+    lunes)`; la elección manual de pill (`diaMobileISO`) se resetea al
+    cambiar de semana **o de `dia`** (si no, elegir otra fecha de la misma
+    semana no movía la pill).
+- `AgendaPage.css`: `.agenda-page__ir-fecha` (mismo lenguaje que
+  `.filtro-fecha`), `.agenda-page__banner` (+ botón ✕), `is-elegido`:
+  encabezado invertido (fondo `--color-tinta`, texto `--color-papel`) y
+  celdas con marco lateral de 1px `--color-tinta` — distinto de `.is-hoy`
+  (fondo papel + subrayado). Si hoy = elegido, gana el encabezado invertido
+  y las celdas combinan fondo papel + marco. `.agenda-page__nav-semana` pasó
+  a `align-items: flex-end` + `flex-wrap` para alinear el input con los
+  botones y que en mobile baje de línea.
+
+**Descartado:** preservar `dia` dentro del efecto que normaliza `semana`
+(cubriría una URL armada a mano con `semana` no-lunes). En el flujo normal
+ese efecto no corre; con una URL a mano se pierde `dia`, aceptable.
+
+**Verificación**
+- `npm run typecheck` (los 4 paquetes) OK; `npm run build --workspace=client`
+  OK (sólo el warning de chunk >500 kB, preexistente).
+- Script `tsx` descartable (scratchpad, fuera del repo) sobre los helpers:
+  `fechaNavegable` con ahora = 2026-11-05 ⇒ "0002/0020/0202-12-12" null,
+  "2026-12-12" y "2031-12-12" ok, "2032-01-01" y "2020-12-31" null,
+  "2021-01-01" ok, "2026-02-30" null, "" null. `diaDeParam` con lunes
+  2026-12-14 ⇒ "2026-12-20" (domingo) ok, "2026-12-21" y "2026-12-13" null.
+  `construirAgenda([], lunes)` 6 columnas; con `forzarDomingo` 7.
+- Chequeo visual en navegador: pendiente, guion abajo.
+
+**Guion manual (panel, `npm run dev`, `/agenda`)**
+A. **Salto lejano, desktop.** En "Ir a fecha" elegir con el calendario una
+   fecha 2–3 meses adelante (ej. viernes 12/02/2027) ⇒ URL
+   `?semana=2027-02-08&dia=2027-02-12`, subtítulo "Semana del 8 feb al 14
+   feb 2027", columna del viernes con encabezado oscuro y marco; banner
+   "Mostrando: viernes 12 de febrero · N turnos" (o "· Sin turnos
+   agendados"); el input muestra la fecha. Comparar N contra los chips de la
+   columna. Con admin, cambiar el filtro de profesional ⇒ N acompaña.
+B. **Salto lejano, mobile.** DevTools 390×844, repetir A ⇒ la pill del
+   viernes queda seleccionada y se ve ese día. Tocar otra pill ⇒ cambia el
+   día mostrado; el banner sigue diciendo el día elegido. Elegir otra fecha
+   de la misma semana con el input ⇒ la pill salta a esa.
+C. **Domingo sin turnos.** Elegir un domingo sin turnos ⇒ aparece la columna
+   Dom (desktop) / la pill Dom (mobile) marcada; banner "· Sin turnos
+   agendados". ✕ ⇒ la columna Dom desaparece.
+D. **Tipeo a mano.** Click en el segmento de año del input y tipear "2027"
+   dígito a dígito ⇒ la URL/semana NO cambia en "0002", "0020", "0202"; sólo
+   navega al completar "2027". Un año fuera de rango (ej. "2040") ⇒ no
+   navega y el input conserva lo tipeado.
+E. **Atrás del browser.** Desde la semana actual, ir a fecha X y después a
+   fecha Y ⇒ "atrás" vuelve a X (banner e input con X); otro "atrás" vuelve
+   a la semana actual sin banner e input vacío.
+F. **✕ del banner.** ⇒ desaparece el banner y la marca de columna/pill; la
+   URL queda `?semana=<lunes>` (misma semana), input vacío. En mobile la
+   pill vuelve al default (hoy si es la semana actual, si no lunes).
+G. **Anterior / Siguiente / Hoy.** Con un día elegido, cada uno ⇒ cambia de
+   semana, sin `dia` en la URL, sin banner, input vacío.
+H. **URL inválida.** `?semana=2027-02-08&dia=2027-03-01` (fuera de la
+   semana) y `&dia=basura` ⇒ se ve la semana sin marca ni banner.
