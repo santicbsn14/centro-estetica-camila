@@ -3,6 +3,9 @@ import type { ServicioPanel } from '../types';
 
 export interface FilaServicioProps {
   servicio: ServicioPanel;
+  // Resuelto por el padre contra el listado de categorías (§15.7.1); null =
+  // sin categoría ("Otros" en la web) o id huérfano.
+  nombreCategoria: string | null;
   onAbrir: (id: string) => void;
 }
 
@@ -11,7 +14,7 @@ export interface FilaServicioProps {
 // atenuados. Sin acciones inline — clonado del mockup, la fila entera abre el
 // drawer (Desactivar/Activar vive ahí, no acá — mismo motivo que turnos: el
 // server de servicios no expone un DELETE, sólo PATCH activo).
-export function FilaServicio({ servicio, onAbrir }: FilaServicioProps) {
+export function FilaServicio({ servicio, nombreCategoria, onAbrir }: FilaServicioProps) {
   return (
     <div
       className={`fila-servicio${servicio.activo ? '' : ' fila-servicio--inactivo'}`}
@@ -28,6 +31,10 @@ export function FilaServicio({ servicio, onAbrir }: FilaServicioProps) {
       <div className="fila-servicio__celda fila-servicio__nombre">
         <div className="fila-servicio__nombre-texto">{servicio.nombre}</div>
         {servicio.descripcion ? <div className="fila-servicio__desc">{servicio.descripcion}</div> : null}
+      </div>
+
+      <div className="fila-servicio__celda fila-servicio__cat">
+        {nombreCategoria ?? <span className="fila-servicio__sin-cat">Sin categoría</span>}
       </div>
 
       <div className="fila-servicio__celda fila-servicio__dur num">{servicio.duracionMin} min</div>

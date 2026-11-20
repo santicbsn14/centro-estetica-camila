@@ -39,6 +39,7 @@ export function ReservaPage() {
   // Categorías desplegadas (frontend.md 2026-09-21): todas cerradas al entrar,
   // independientes entre sí. Vive acá, no en Catalogo, para que "Cambiar"
   // desde el paso 2 vuelva con categoría y servicio elegidos todavía abiertos.
+  // Guarda ids de categoría (no labels) — "Otros" usa CATEGORIA_OTROS_ID.
   const [categoriasAbiertas, setCategoriasAbiertas] = useState<ReadonlySet<string>>(() => new Set());
   const [profesionalesPorServicio, setProfesionalesPorServicio] = useState<
     Record<string, Carga<ProfesionalPublico[]>>
@@ -117,11 +118,11 @@ export function ReservaPage() {
   }
 
   // --- Paso 1: acordeón ---
-  function toggleCategoria(categoria: string) {
+  function toggleCategoria(categoriaId: string) {
     setCategoriasAbiertas((prev) => {
       const siguiente = new Set(prev);
-      if (siguiente.has(categoria)) siguiente.delete(categoria);
-      else siguiente.add(categoria);
+      if (siguiente.has(categoriaId)) siguiente.delete(categoriaId);
+      else siguiente.add(categoriaId);
       return siguiente;
     });
   }

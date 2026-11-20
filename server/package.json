@@ -12,7 +12,8 @@
     "test": "vitest run",
     "seed:admin": "tsx src/scripts/seedAdmin.ts",
     "seed:turnos": "tsx src/scripts/seedTurnos.ts",
-    "seed:plantillas": "tsx src/scripts/seedPlantillas.ts"
+    "seed:plantillas": "tsx src/scripts/seedPlantillas.ts",
+    "backfill:categorias": "tsx src/scripts/backfillCategorias.ts"
   },
   "dependencies": {
     "argon2": "^0.41.1",

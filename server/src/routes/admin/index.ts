@@ -4,6 +4,7 @@ import { serviciosAdminRouter } from './servicios.routes';
 import { configuracionAdminRouter } from './configuracion.routes';
 import { usuariosAdminRouter } from './usuarios.routes';
 import { excepcionesAdminRouter } from './excepciones.routes';
+import { categoriasAdminRouter } from './categorias.routes';
 
 // Namespace /api/admin — todo el CRUD administrativo (servicios, usuarios,
 // excepciones, configuracion — modelo-datos-turnos.md §15.7). requireRol('admin')
@@ -21,3 +22,4 @@ adminRouter.use('/servicios', serviciosAdminRouter);
 adminRouter.use('/configuracion', configuracionAdminRouter);
 adminRouter.use('/usuarios', usuariosAdminRouter);
 adminRouter.use('/excepciones', excepcionesAdminRouter);
+adminRouter.use('/categorias', categoriasAdminRouter);

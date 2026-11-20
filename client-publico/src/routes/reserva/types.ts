@@ -11,6 +11,15 @@ export interface ServicioPublico {
   duracionMin: number;
   precio?: number; // ausente si !mostrarPrecio — nunca inventar un precio acá
   imagenUrl?: string; // ausente si el servicio no tiene imagen cargada
+  // null = sin categoría (o huérfana) ⇒ bucket "Otros" (modelo-datos-turnos.md
+  // §15.7.1). Siempre presente en la respuesta.
+  categoria: CategoriaPublica | null;
+}
+
+export interface CategoriaPublica {
+  id: string;
+  nombre: string; // como lo escribe Camila — mayúsculas sólo por CSS
+  orden: number;
 }
 
 export interface ProfesionalPublico {

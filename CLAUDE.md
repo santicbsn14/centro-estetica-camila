@@ -66,9 +66,9 @@ Documentadas a fondo en `modelo-datos-turnos.md` §3. Resumen para no pisarlas s
   `Date.getDay()` sobre UTC. Fechas ISO que viajan por API SIEMPRE con sufijo `Z`
   (`.toUTC().toISO()`) — `z.string().datetime()` rechaza offset local.
 - **Plata:** enteros en centavos. Nunca un `Number` decimal en campos monetarios.
-- **Borrado:** no existe, salvo un caso. `activo: false` es el default (servicios, usuarios).
-  Única excepción: `excepciones` tiene DELETE físico porque ningún turno la referencia por
-  snapshot (§15.10 explica por qué).
+- **Borrado:** no existe, salvo dos casos. `activo: false` es el default (servicios, usuarios).
+  Excepciones conscientes: `excepciones` y `categorias` tienen DELETE físico porque ningún
+  turno las referencia por snapshot (§15.10 y §15.7.1 explican por qué).
 - **Snapshots:** el turno congela precio, duración y datos de la clienta al reservar. Editar el
   original (precio, horarios) nunca reescribe turnos viejos.
 - **Transiciones de estado:** siempre con el estado esperado en el filtro del

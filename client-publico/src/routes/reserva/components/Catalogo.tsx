@@ -1,4 +1,4 @@
-import { CATEGORIAS_SERVICIO, CATEGORIA_FALLBACK, categoriaDe } from '../constants';
+import { CATEGORIA_FALLBACK, CATEGORIA_OTROS_ID } from '../constants';
 import type { Carga, ProfesionalPublico, ServicioPublico } from '../types';
 import { ServicioCard } from './ServicioCard';
 
@@ -7,7 +7,7 @@ interface Props {
   categoriasAbiertas: ReadonlySet<string>;
   servicioAbiertoId: string | null;
   profesionalesPorServicio: Record<string, Carga<ProfesionalPublico[]>>;
-  onToggleCategoria: (categoria: string) => void;
+  onToggleCategoria: (categoriaId: string) => void;
   onToggleServicio: (servicio: ServicioPublico) => void;
   onElegirProfesional: (servicio: ServicioPublico, profesional: ProfesionalPublico) => void;
   onReintentar: () => void;
@@ -45,31 +45,44 @@ export function Catalogo({
     return <p className="estado-carga">No hay servicios disponibles por el momento.</p>;
   }
 
-  // Agrupado por categoría fija (frontend.md §4.11 punto 3a). El orden
-  // dentro de cada bucket es el orden de llegada del array — GET
-  // /api/servicios ya lo devuelve ordenado por `orden` (servicios.routes.ts),
-  // acá no se reordena, sólo se reparte en buckets sin tocar ese orden
-  // relativo.
-  const buckets = new Map<string, ServicioPublico[]>();
+  // Agrupado por categoría real (frontend.md §4.11, 2026-11-16): grupos por
+  // `categoria.id`, ordenados por `categoria.orden` (desempate nombre);
+  // `null` ⇒ "Otros" al final. Dentro del grupo, el orden de llegada del
+  // array — GET /api/servicios ya lo devuelve ordenado por `orden` de
+  // servicio, acá no se reordena. Sólo existen grupos con al menos un
+  // servicio activo (el server sólo manda activos) ⇒ una categoría vacía no
+  // aparece.
+  const grupos = new Map<string, { id: string; nombre: string; orden: number; servicios: ServicioPublico[] }>();
+  const otros: ServicioPublico[] = [];
   for (const servicio of servicios.datos) {
-    const categoria = categoriaDe(servicio.nombre);
-    const lista = buckets.get(categoria);
-    if (lista) lista.push(servicio);
-    else buckets.set(categoria, [servicio]);
+    const categoria = servicio.categoria;
+    if (!categoria) {
+      otros.push(servicio);
+      continue;
+    }
+    const grupo = grupos.get(categoria.id);
+    if (grupo) grupo.servicios.push(servicio);
+    else grupos.set(categoria.id, { ...categoria, servicios: [servicio] });
   }
-  const todasLasCategorias = [...CATEGORIAS_SERVICIO, CATEGORIA_FALLBACK];
+  const ordenados = [...grupos.values()].sort(
+    (a, b) => a.orden - b.orden || a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
+  );
+  if (otros.length > 0) {
+    ordenados.push({ id: CATEGORIA_OTROS_ID, nombre: CATEGORIA_FALLBACK, orden: Infinity, servicios: otros });
+  }
 
   return (
     <div className="catalogo">
-      {todasLasCategorias.map((categoria, i) => {
-        const lista = buckets.get(categoria);
-        if (!lista) return null;
-        const abierta = categoriasAbiertas.has(categoria);
-        const headerId = `categoria-hd-${i}`;
-        const panelId = `categoria-panel-${i}`;
+      {ordenados.map((grupo) => {
+        const lista = grupo.servicios;
+        const abierta = categoriasAbiertas.has(grupo.id);
+        // ids estables por categoría (no por índice): si se agrega/quita un
+        // grupo, aria-controls no queda apuntando a otro panel.
+        const headerId = `categoria-hd-${grupo.id}`;
+        const panelId = `categoria-panel-${grupo.id}`;
 
         return (
-          <section className={`categoria${abierta ? ' categoria--abierta' : ''}`} key={categoria}>
+          <section className={`categoria${abierta ? ' categoria--abierta' : ''}`} key={grupo.id}>
             <h2 className="categoria-h">
               <button
                 type="button"
@@ -77,9 +90,10 @@ export function Catalogo({
                 className="categoria-hd"
                 aria-expanded={abierta}
                 aria-controls={panelId}
-                onClick={() => onToggleCategoria(categoria)}
+                onClick={() => onToggleCategoria(grupo.id)}
               >
-                <span className="categoria-nombre">{categoria}</span>
+                {/* Mayúsculas por CSS (.categoria-nombre text-transform), no con el string. */}
+                <span className="categoria-nombre">{grupo.nombre}</span>
                 <span className="categoria-cuenta">{lista.length === 1 ? '1 servicio' : `${lista.length} servicios`}</span>
                 <svg
                   className="categoria-chev"

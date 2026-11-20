@@ -1,12 +1,11 @@
 import { z } from 'zod';
+import { objectIdSchema } from './common.schema';
 
 // CRUD administrativo de excepciones (modelo-datos-turnos.md §15.10). Cierra
 // el CRUD del panel. Sin superficie "mía" — v1 las carga la dueña para todos.
 
-// Formato únicamente — mismo criterio que en usuario.schema.ts: NO valida
-// existencia contra la base (un profesionalId inexistente da una excepción
-// que no aplica a nadie, inocuo).
-const objectIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/, 'id inválido');
+// objectIdSchema (common.schema.ts): formato únicamente — un profesionalId
+// inexistente da una excepción que no aplica a nadie, inocuo.
 
 const tipoExcepcionSchema = z.enum(['feriado', 'vacaciones', 'bloqueo']);
 

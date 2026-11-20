@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Document, Types } from 'mongoose';
 import { horarioDiaSchema, IHorarioDia } from './subschemas/horario.subschema';
 
 export interface IServicio extends Document {
@@ -11,6 +11,7 @@ export interface IServicio extends Document {
   horarios: IHorarioDia[] | null; // null = hereda de la profesional
   orden: number;
   imagenUrl?: string;
+  categoriaId: Types.ObjectId | null; // null = "Otros"; referencia viva, NO snapshot (§4)
   activo: boolean;
   creadoEn: Date;
   actualizadoEn: Date;
@@ -36,6 +37,8 @@ const servicioSchema = new Schema<IServicio>(
     },
     orden: { type: Number, required: true, default: 0 },
     imagenUrl: { type: String },
+    // Sin required, default null — retrocompatible (§4, 2026-11-16).
+    categoriaId: { type: Schema.Types.ObjectId, ref: 'Categoria', default: null },
     activo: { type: Boolean, required: true, default: true },
   },
   { timestamps: { createdAt: 'creadoEn', updatedAt: 'actualizadoEn' } }

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { horariosUsuarioSchema } from './common.schema';
+import { horariosUsuarioSchema, objectIdSchema } from './common.schema';
 
 // CRUD de usuarios + superficie "lo mío" (modelo-datos-turnos.md §15.9).
 // Dos gates distintos consumen estos schemas: /api/admin/usuarios
@@ -9,9 +9,8 @@ import { horariosUsuarioSchema } from './common.schema';
 
 const rolSchema = z.enum(['admin', 'profesional']);
 
-// Formato únicamente — NO valida existencia contra la base (sería round-trip
-// por poco; un id de servicio inexistente es inocuo, simplemente no se ofrece).
-const objectIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/, 'id inválido');
+// objectIdSchema (common.schema.ts): formato únicamente — un id de servicio
+// inexistente es inocuo, simplemente no se ofrece.
 
 // Alta — única vía, no hay auto-registro. `activo` no se acepta: nace true.
 export const crearUsuarioSchema = z.object({

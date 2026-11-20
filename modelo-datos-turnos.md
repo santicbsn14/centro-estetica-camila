@@ -67,7 +67,7 @@ Aplican a todo el modelo, sin excepción.
 
 ## 4. Colecciones
 
-Ocho en total. El sub-esquema de horarios se comparte entre tres de ellas.
+Ocho en total (nueve desde 2026-11-16: se suma `categorias`, ver abajo). El sub-esquema de horarios se comparte entre tres de ellas.
 
 ### Sub-esquema de horarios
 
@@ -121,11 +121,30 @@ Documento único.
   mostrarPrecio: boolean,
   horarios: [...] | null,          // null = hereda de la profesional
   orden: number,
+  categoriaId: ObjectId | null,    // ref 'Categoria' — 2026-11-16, ver `categorias`
   activo: boolean
 }
 ```
 
 `horarios: null` significa "sin restricción propia". **El array vacío está prohibido** por validación: significaría "nunca disponible" y se escribe casi igual que `null`. O es `null`, o tiene al menos un día con al menos un bloque.
+
+**`categoriaId` (DECISIÓN 2026-11-16 — categorías autoadministrables).** `ref: 'Categoria'`, `default: null`, sin `required` — retrocompatible, los servicios existentes quedan en `null` hasta el backfill. `null` = "Otros" en el catálogo público. Es **referencia viva, NO snapshot**: los turnos no guardan la categoría (no la necesitan — es sólo agrupado de presentación), así que renombrar o borrar una categoría no toca ningún turno. No se valida existencia contra la base al escribir (mismo criterio que `usuario.servicios`, §15.9): un id huérfano (carrera con un DELETE) se resuelve como `null` en el GET público.
+
+### categorias
+
+DECISIÓN 2026-11-16. Pedido de Camila: crear, renombrar y borrar categorías, y asignarlas a los servicios ella misma. Reemplaza el diseño con enum del 2026-11-05 (nunca implementado) y el mapeo hardcodeado `NOMBRE_A_CATEGORIA` de `client-publico` (frontend.md, "Categorización visual de servicios en catálogo público", REEMPLAZADA).
+
+```ts
+{
+  nombre: string,                  // único case-insensitive (collation es, strength 2)
+  orden: number,                   // orden de los grupos en el catálogo público
+  creadoEn, actualizadoEn
+}
+```
+
+- **Sin `activo`.** Una categoría sin servicios activos no se muestra en la web; si sobra, se borra.
+- **`nombre` se guarda como lo escribe Camila.** El catálogo público lo muestra en mayúsculas con CSS (`text-transform: uppercase`), no con el string.
+- **Borrado FÍSICO — segunda excepción consciente a "borrado no existe" (§3).** Mismo argumento que excepciones (§15.10): ningún turno la referencia por snapshot. Con reglas (409 si tiene servicios activos; desasigna los inactivos antes de borrar) — detalle en §15.7.1.
 
 ### usuarios
 
@@ -507,6 +526,9 @@ alguna y hay que recrearla, cambia el HX → se edita el dato, no el código.
 // servicios
 { activo: 1, orden: 1 }                          // catálogo público
 { nombre: 1 } unique                             // collation strength 2
+
+// categorias (2026-11-16)
+{ nombre: 1 } unique                             // collation { locale:'es', strength:2 }, igual que servicios
 
 // usuarios
 { email: 1 } unique
@@ -952,6 +974,13 @@ typecheck limpio en el monorepo.**
   de dev `:5173,:5174`). Cierra el ⚠ REVISAR EN WEB del scaffolding de
   `client-publico` — panel y web pública ya pueden convivir. No reabre
   `credentials`/`SameSite`. Detalle en §17.
+- **Categorías de servicio autoadministrables** (§4 `categorias`, §15.7.1,
+  2026-11-16): `GET/POST/PATCH/DELETE /api/admin/categorias`, DELETE físico
+  con 409 `CATEGORIA_CON_SERVICIOS` si hay activos; `servicios.categoriaId`;
+  `categoria` embebida en GET /api/servicios público; script
+  `backfill:categorias`. Detalle en §17.
+
+**Conteo vigente (2026-11-16): 172 tests server + 10 shared verdes.**
 
 ---
 
@@ -1506,6 +1535,86 @@ Riesgos aceptados (documentados, no mitigados por infra):
   realmente una imagen viva.
 
 
+### 15.7.1 CRUD administrativo — categorías de servicio (DECISIÓN 2026-11-16)
+
+Categorías autoadministrables (colección `categorias`, §4). Reemplaza el
+diseño con enum del 2026-11-05 (nunca implementado) y el mapeo
+`NOMBRE_A_CATEGORIA` de `client-publico`.
+
+**Endpoints**, bajo `adminRouter` (`/api/admin`, `requireRol('admin')` ya
+montado — §15.7):
+- `GET    /api/admin/categorias`      — todas, `orden` asc, desempate `nombre`,
+  cada una con `serviciosActivos: number` (agregación sobre servicios activos
+  agrupados por `categoriaId`).
+- `POST   /api/admin/categorias`      — `{ nombre, orden }` ⇒ 201.
+- `PATCH  /api/admin/categorias/:id`  — parcial, `.strict()`.
+- `DELETE /api/admin/categorias/:id`  — 204, reglas abajo.
+
+**Errores:** `E11000` en `nombre` ⇒ `409 NOMBRE_DUPLICADO` (mismo código que
+servicios), nunca el error crudo de Mongo. `:id` malformado ⇒ 400 (no un 500
+por CastError).
+
+**`CategoriaPanel`** = `{ id, nombre, orden, serviciosActivos, creadoEn,
+actualizadoEn }`, un solo mapper.
+
+**Borrado FÍSICO — segunda excepción consciente a "borrado no existe" (§3/§4).**
+Mismo argumento que excepciones (§15.10): ningún turno referencia una
+categoría (es referencia viva desde `servicios`, no snapshot).
+- Si hay servicios ACTIVOS con ese `categoriaId` ⇒ `409
+  CATEGORIA_CON_SERVICIOS`, `detalle: { servicios: [{ id, nombre }] }`. No se
+  borra nada.
+- Si sólo hay INACTIVOS ⇒ `updateMany { categoriaId: null }` sobre esos y
+  después el delete. Sin transacción: si el delete falla después, sólo quedan
+  inactivos sin categoría (inocuo).
+- Carrera aceptada (asignar un servicio mientras se borra la categoría): el id
+  queda huérfano y el GET público lo resuelve como `null`.
+
+**@shared:**
+- `categoria.schema.ts` nuevo: `crearCategoriaSchema { nombre:
+  z.string().trim().min(2).max(40), orden: z.number().int() }`;
+  `editarCategoriaSchema` parcial `.strict()`. Exportado desde `index`.
+- `crearServicioSchema` y `editarServicioSchema`: `categoriaId:
+  objectIdSchema.nullable().optional()`. `null` explícito en PATCH = sacar de
+  la categoría. No se valida existencia contra la base (mismo criterio que
+  `usuario.servicios`, §15.9).
+- `objectIdSchema` (estaba duplicado en `usuario.schema.ts` y
+  `excepcion.schema.ts`) se extrae a `common.schema.ts` y se reusa en los tres.
+
+**GET /api/servicios (público, §15.3):** cada servicio suma `categoria: { id,
+nombre, orden } | null`. Resuelto en el server con un `Categoria.find()` +
+`Map` en memoria (colección chica). Huérfano ⇒ `null`. Va en el `.select()`
+(`categoriaId`) Y en el `.map()`. **No se crea `GET /api/categorias`
+público.**
+
+**Backfill:** `server/src/scripts/backfillCategorias.ts` + script npm
+`backfill:categorias`.
+- Crea las 6 categorías actuales con upsert por nombre + `$setOnInsert`, en
+  sentence case y `orden` 0-5 en el orden de hoy: Uñas, Cejas, Pestañas,
+  Tratamientos faciales, Masajes, Maquillaje y peinado.
+- Asigna `categoriaId` SÓLO a servicios sin `categoriaId`, según el mapeo de
+  `constants.ts` COPIADO al script (match trim + lowercase). Lo que no matchea
+  se reporta por consola y queda en `null`.
+- Dry-run por default, `--apply` para escribir. Idempotente. Incluye inactivos.
+
+**ORDEN DE DEPLOY OBLIGATORIO:** server → backfill dry-run → backfill
+`--apply` → panel + client-publico. Si client-publico sale antes del
+backfill, todo el catálogo cae en "Otros".
+
+**Trade-offs aceptados:** orden numérico sin drag-and-drop; una categoría
+nueva no se ve en la web hasta que tenga un servicio activo.
+
+**Tests (mínimo):**
+- crear ⇒ 201; nombre duplicado con otra capitalización ⇒ 409 NOMBRE_DUPLICADO.
+- PATCH nombre/orden; PATCH con campo no declarado ⇒ 400.
+- DELETE sin servicios ⇒ 204; con 1 activo ⇒ 409 + `detalle.servicios`; con
+  sólo inactivos ⇒ 204 y esos quedan con `categoriaId: null`.
+- GET admin trae `serviciosActivos` correcto.
+- profesional sobre `/api/admin/categorias` ⇒ 403.
+- GET /api/servicios público: categoría poblada, `null`, y huérfana ⇒ `null`.
+- PATCH servicio con `categoriaId: null` ⇒ queda `null`.
+- backfill: dry-run no escribe; `--apply` asigna; segunda corrida no cambia nada.
+
+
 ### 15.8 CRUD administrativo — configuración (singleton)
 
 Bajo `/api/admin` (§15.7), `requireRol('admin')`. Singleton `_id: 'centro'`
@@ -1790,6 +1899,8 @@ rompe integridad de nada, y `activo:false` sólo dejaría basura permanente que
 la query de disponibilidad tendría que filtrar para siempre. Es el ÚNICO
 recurso con DELETE físico, y lo es precisamente porque nada lo referencia —
 cumple §4, no lo contradice.
+> Nota 2026-11-16: ya no es el único — `categorias` (§15.7.1) es la segunda
+> excepción consciente, con el mismo argumento (ningún turno la referencia).
 
 **Rango `desde`/`hasta` como Date UTC ya armado desde el panel (§4).** Sin
 campo `todoElDia`: el panel construye el rango 00:00–23:59 local y lo manda
@@ -3206,3 +3317,109 @@ completa: `shared` 10/10 verdes; `server` 152/152 verdes (un test de
 `auth.routes.test.ts` da flaky por timeout de 5s bajo contención de CPU al
 correr los 18 archivos en paralelo — no relacionado con este cambio, pasa
 siempre en corrida aislada).
+### 2026-11-16 — Categorías de servicio autoadministrables (§4 `categorias`, §15.7.1)
+
+Implementa la DECISIÓN 2026-11-16 (copiada a §4, §9 y §15.7.1 antes de
+codear). Sin contradicciones con §1-16; ver "Notas" abajo por dos ajustes
+mecánicos fuera de los archivos pedidos.
+
+**Qué se hizo (server + @shared):**
+- **`@shared`**: `objectIdSchema` extraído a `common.schema.ts` (exportado) y
+  reusado en `usuario.schema.ts`, `excepcion.schema.ts` y `servicio.schema.ts`
+  — se borraron las dos copias locales. `categoria.schema.ts` nuevo
+  (`crearCategoriaSchema`: `nombre` trim/min 2/max 40 + `orden` int;
+  `editarCategoriaSchema` = `.partial().strict()`), exportado desde `index.ts`.
+  `crearServicioSchema`/`editarServicioSchema` suman `categoriaId:
+  objectIdSchema.nullable().optional()`.
+- **Modelo** `categoria.model.ts` nuevo (`Categoria`, colección `categorias`,
+  timestamps `creadoEn/actualizadoEn`, índice `{nombre:1}` unique con
+  collation `{locale:'es', strength:2}`). `servicio.model.ts`: `categoriaId`
+  `ObjectId ref 'Categoria'`, `default: null`, sin `required`.
+- **`categorias.service.ts`** + **`routes/admin/categorias.routes.ts`**,
+  montado en `adminRouter.use('/categorias', …)` (hereda `requireAuth` +
+  `requireRol('admin')`). Mapper único `CategoriaPanel`. `serviciosActivos`
+  sale de UNA agregación (`$match {activo:true}` + `$group` por
+  `categoriaId`), no una query por categoría. Listado `sort({orden:1,
+  nombre:1})` con la collation del índice (desempate case-insensitive).
+  DELETE: `exists` ⇒ 404; activos ⇒ 409 `CATEGORIA_CON_SERVICIOS` con
+  `detalle.servicios [{id,nombre}]` sin tocar nada (ni los inactivos);
+  si no, `updateMany {categoriaId:null}` sobre los inactivos y
+  `findByIdAndDelete`. `:id` malformado ⇒ 400 `ID_INVALIDO`; inexistente ⇒
+  404 `CATEGORIA_NO_ENCONTRADA`. E11000 ⇒ 409 `NOMBRE_DUPLICADO` reusando
+  `esNombreDuplicado` de `servicios.service.ts` (ahora exportado).
+- **`ServicioPanel`** suma `categoriaId: string | null` (normaliza a `null`
+  documentos previos al campo). `crearServicioPanel` lo pasa (`?? null`);
+  `editarServicioPanel` no cambió (`$set` del input: `null` explícito lo
+  vacía, omitirlo no lo toca).
+- **GET /api/servicios** (público): `categoriaId` en el `.select()`;
+  `Categoria.find()` en paralelo + `Map` en memoria; en el `.map()`,
+  `categoria: {id,nombre,orden} | null` (huérfano o sin campo ⇒ `null`).
+  `categoriaId` crudo no viaja.
+- **`scripts/backfillCategorias.ts`** + `npm run backfill:categorias`
+  (workspace server). Exporta `backfillCategorias({apply})` (testeable) y
+  `CATEGORIAS_INICIALES`. Dry-run por default, `--apply` escribe. Categorías:
+  `findOne` con collation ⇒ si existe (aunque con otra capitalización) no se
+  toca; si no, upsert `$setOnInsert {nombre, orden}`. Servicios: sólo los sin
+  `categoriaId` (null o campo ausente), activos e inactivos, por el mapeo
+  copiado de `constants.ts` (incluida la clave muerta `'limpieza profunda +
+  espátula ultrasónica'`, inofensiva); el update vuelve a filtrar por "sin
+  categoría" para no pisar una asignación hecha desde el panel entre medio.
+  Reporta por consola creadas/existentes/asignados/sin match. El workaround
+  de DNS de `seedAdmin`/`seedPlantillas` va dentro de `main()` (no en el top
+  del módulo) para que importar el script desde el test no lo dispare.
+
+**Panel + client-publico:** ver frontend.md §5, misma fecha.
+
+**ORDEN DE DEPLOY OBLIGATORIO:** server → `backfill:categorias` dry-run →
+`backfill:categorias -- --apply` → panel + client-publico. Si client-publico
+sale antes del backfill, todo el catálogo cae en "Otros". El panel también
+depende del server nuevo: `ServiciosPage` carga servicios y categorías con
+un `Promise.all`, así que contra un server viejo (404 en
+`/api/admin/categorias`) la pantalla entera muestra error.
+
+**Tests:** 20 nuevos (152 → 172 server; shared sigue 10).
+- `routes/admin/categorias.routes.test.ts` (14): índice real con collation;
+  crear 201 + shape exacto; duplicado con otra capitalización ⇒ 409 (sin
+  `E11000` en el body); 400 de validación; PATCH nombre/orden y sólo orden;
+  PATCH con campo no declarado ⇒ 400 `BODY_INVALIDO`; renombrar a existente
+  ⇒ 409; `:id` malformado 400 / inexistente 404; GET con orden + desempate
+  case-insensitive + `serviciosActivos` (no cuenta inactivos ni null); DELETE
+  sin servicios 204 físico; con 1 activo 409 + `detalle.servicios` y el
+  inactivo intacto; con sólo inactivos 204 + desasignados (otra categoría
+  intacta); DELETE malformado 400 / inexistente 404; profesional ⇒ 403 en
+  las 4 rutas.
+- `routes/servicios.routes.test.ts` (1): `categoria` poblada, `null`,
+  huérfana ⇒ `null`, documento legacy sin el campo ⇒ `null`; no viaja
+  `categoriaId`.
+- `routes/admin/servicios.routes.test.ts` (1): crear ⇒ `categoriaId:null`;
+  PATCH asigna; PATCH de otro campo no la toca; PATCH `null` ⇒ queda `null`
+  (también en la base); id malformado ⇒ 400.
+- `scripts/backfillCategorias.test.ts` (4): dry-run no escribe (snapshot
+  idéntico) y reporta; `--apply` crea las 6 con orden 0-5 y asigna (trim +
+  lowercase, inactivo incluido, documento legacy sin el campo incluido, sin
+  match ⇒ null); segunda corrida con ediciones del panel en el medio no
+  cambia nada; categoría preexistente con otra capitalización no se duplica.
+
+**Notas (no son ⚠, ajustes mecánicos):**
+- `CLAUDE.md`, regla "Borrado": decía "Única excepción: `excepciones`".
+  Quedaba falso con esta decisión; se actualizó a "dos casos" (excepciones +
+  categorias). No cambia ninguna regla, sólo refleja la decisión.
+- §15.10 dice "Es el ÚNICO recurso con DELETE físico": no se reescribió
+  (especificación cerrada); se agregó una nota fechada debajo que apunta a
+  §15.7.1. Mismo criterio en §4 ("Ocho en total" ⇒ nota "nueve desde
+  2026-11-16").
+- Riesgo del backfill (aceptado, documentado en el script): el upsert es por
+  nombre. Si Camila renombra "Uñas" desde el panel y después alguien vuelve a
+  correr `--apply`, se crearía una "Uñas" nueva vacía. Se corre una vez, en
+  el deploy.
+
+**Descartado:** `$lookup`/`populate` en el GET público (la decisión pide
+`find()` + `Map`); transacción en el DELETE (la decisión la descarta
+explícitamente); validar existencia de `categoriaId` al asignar (§15.9).
+
+**Verificación:** `npm run typecheck` limpio en los 4 workspaces;
+`npm run build` de `client` (sólo el warning preexistente de chunk >500 kB) y
+`client-publico` OK. Suite completa: `shared` 10/10, `server` 172/172 (20
+archivos) en una sola corrida, sin el flake de `auth.routes.test.ts` esta
+vez. El backfill NO se corrió contra ninguna base real (dev ni prod) — queda
+en el guión manual de frontend.md §5.

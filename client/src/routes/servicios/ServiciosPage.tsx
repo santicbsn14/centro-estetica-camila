@@ -5,7 +5,8 @@ import { HttpError } from '../../lib/http';
 import * as api from './api';
 import { FilaServicio } from './components/FilaServicio';
 import { ServicioDrawer, type ResultadoGuardar } from './components/ServicioDrawer';
-import type { ServicioPanel } from './types';
+import { CategoriasDrawer } from './components/CategoriasDrawer';
+import type { CategoriaPanel, ServicioPanel } from './types';
 import './ServiciosPage.css';
 
 // Mensaje mapeado por `codigo` (nunca por texto, frontend.md §2) — mismo
@@ -22,6 +23,10 @@ export function ServiciosPage() {
   const { mostrarToast } = useToast();
 
   const [servicios, setServicios] = useState<ServicioPanel[]>([]);
+  // Categorías (§15.7.1): para el select del drawer, el nombre en cada fila y
+  // el drawer de gestión. Se recargan junto con los servicios.
+  const [categorias, setCategorias] = useState<CategoriaPanel[]>([]);
+  const [categoriasAbierto, setCategoriasAbierto] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +39,9 @@ export function ServiciosPage() {
     setCargando(true);
     setError(null);
     try {
-      setServicios(await api.listarServicios());
+      const [listaServicios, listaCategorias] = await Promise.all([api.listarServicios(), api.listarCategorias()]);
+      setServicios(listaServicios);
+      setCategorias(listaCategorias);
     } catch (err) {
       setError(mensajeError(err));
     } finally {
@@ -111,6 +118,17 @@ export function ServiciosPage() {
     }
   }
 
+  // Desde el drawer de categorías: refresca sólo categorías (el conteo
+  // serviciosActivos y el select), sin el "Cargando…" de la lista entera.
+  const recargarCategorias = useCallback(async () => {
+    try {
+      setCategorias(await api.listarCategorias());
+    } catch (err) {
+      mostrarToast(mensajeError(err), 'error');
+    }
+  }, [mostrarToast]);
+
+  const nombreCategoria = useMemo(() => new Map(categorias.map((c) => [c.id, c.nombre])), [categorias]);
   const ordenados = useMemo(() => [...servicios].sort((a, b) => a.orden - b.orden), [servicios]);
   const activos = servicios.filter((s) => s.activo).length;
 
@@ -118,9 +136,14 @@ export function ServiciosPage() {
     <div className="servicios-page">
       <div className="servicios-page__head">
         <h1 className="servicios-page__titulo">Servicios</h1>
-        <Button variant="primary" onClick={abrirNuevo}>
-          + Nuevo servicio
-        </Button>
+        <div className="servicios-page__acciones">
+          <Button variant="secondary" onClick={() => setCategoriasAbierto(true)}>
+            Categorías
+          </Button>
+          <Button variant="primary" onClick={abrirNuevo}>
+            + Nuevo servicio
+          </Button>
+        </div>
       </div>
       <p className="servicios-page__sub">
         {servicios.length} {servicios.length === 1 ? 'servicio' : 'servicios'} · {activos} activos en la web
@@ -136,6 +159,7 @@ export function ServiciosPage() {
         <div className="fila-servicio-grupo">
           <div className="fila-servicio fila-servicio--header">
             <div>Servicio</div>
+            <div className="fila-servicio__cat">Categoría</div>
             <div className="fila-servicio__dur">Duración</div>
             <div className="fila-servicio__buf">Limpieza</div>
             <div className="fila-servicio__precio">Precio</div>
@@ -143,7 +167,13 @@ export function ServiciosPage() {
             <div>Estado</div>
           </div>
           {ordenados.map((s) => (
-            <FilaServicio key={s.id} servicio={s} onAbrir={abrirEdicion} />
+            <FilaServicio
+              key={s.id}
+              servicio={s}
+              // Huérfano (categoría borrada en carrera) ⇒ null, igual que la web.
+              nombreCategoria={s.categoriaId ? nombreCategoria.get(s.categoriaId) ?? null : null}
+              onAbrir={abrirEdicion}
+            />
           ))}
         </div>
       )}
@@ -152,11 +182,20 @@ export function ServiciosPage() {
         <ServicioDrawer
           servicio={editando}
           serviciosExistentes={servicios}
+          categorias={categorias}
           guardando={guardando}
           toggleOcupado={toggleOcupadoId === editando?.id}
           onGuardar={guardar}
           onToggleActivo={editando ? toggleActivo : undefined}
           onCerrar={cerrar}
+        />
+      ) : null}
+
+      {categoriasAbierto ? (
+        <CategoriasDrawer
+          categorias={categorias}
+          onCambio={recargarCategorias}
+          onCerrar={() => setCategoriasAbierto(false)}
         />
       ) : null}
     </div>

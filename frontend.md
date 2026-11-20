@@ -415,6 +415,29 @@ display), mostrarPrecio (switch), horario (editor, ver abajo), orden.
 - Desactivar NO muestra conteo de turnos futuros (el server de servicios no lo
   devuelve, a dif. de usuarios §15.9). Sólo avisa que deja de ofrecerse.
 
+#### Categorías autoadministrables (§4.5) — DECISIÓN 2026-11-16
+
+Backend en modelo-datos-turnos.md §4 (`categorias`, `servicios.categoriaId`) y
+§15.7.1 (`/api/admin/categorias`). Sin pantalla ni nav nueva:
+- **ServiciosPage:** botón "Categorías" en el head que abre un drawer de
+  gestión. Lista por `orden` (nombre, orden, "N servicios"), alta inline,
+  editar nombre/orden, eliminar con confirmación inline (patrón
+  FilaExcepcion). Si vuelve `409 CATEGORIA_CON_SERVICIOS` ⇒ "Tiene N
+  servicios activos: X, Y. Pasalos a otra categoría antes de borrarla."
+  Copy fijo en el drawer: "Las categorías sin servicios activos no se
+  muestran en la web." `409 NOMBRE_DUPLICADO` inline bajo el nombre.
+- **ServicioDrawer:** select "Categoría" con las categorías + opción "Sin
+  categoría (aparece en Otros)" → manda `null`.
+- **FilaServicio:** muestra el nombre de la categoría.
+- Shape `CategoriaPanel` espejado en `types.ts` (mismo criterio que el resto).
+
+Trade-offs aceptados: orden numérico sin drag-and-drop; una categoría nueva no
+se ve en la web hasta que tenga un servicio activo.
+
+**ORDEN DE DEPLOY OBLIGATORIO:** server → backfill dry-run → backfill
+`--apply` → panel + client-publico. Si client-publico sale antes del backfill,
+todo el catálogo cae en "Otros".
+
 
 ### 4.6 Pantalla: CRUD de usuarios / profesionales (panel, admin) — mockup cerrado
 
@@ -645,6 +668,8 @@ de enviar, mismo criterio que el panel.
 scaffolding). Consume (§15.1/15.2/15.3, todos públicos, sin auth):
 - GET /api/servicios — catálogo (activo:true, ordenado). Sólo nombre, descripcion,
   duracionMin, precio (SI mostrarPrecio), _id. NUNCA horarios/buffer.
+  Desde 2026-11-16 suma `categoria: { id, nombre, orden } | null` (ver
+  "Catálogo público: agrupado por categoría real" abajo).
 - GET /api/servicios/:id/profesionales — SÓLO _id + nombre. NUNCA email/telefono.
 - GET /api/disponibilidad?servicioId&profesionalId&desde&hasta — {slots: Slot[]}
   (Slot={inicio,fin} ISO UTC), lista plana. El front agrupa por día LOCAL (Luxon).
@@ -745,6 +770,26 @@ usuario abre.
 Contenedor con aspect-ratio 16/9 fijo (ya cerrado) desde el momento de
 expandir, para que la carga async de la imagen no corra el resto del
 contenido expandido.
+
+#### Catálogo público: agrupado por categoría real (§4.11) — DECISIÓN 2026-11-16
+
+REEMPLAZA "Categorización visual de servicios en catálogo público" (mapeo
+hardcodeado nombre→categoría, "NO se agrega campo categoria") y el diseño con
+enum del 2026-11-05. La categoría ahora es dato (modelo-datos-turnos.md §4
+`categorias`, §15.7.1) y llega en GET /api/servicios como
+`categoria: { id, nombre, orden } | null`.
+- Agrupar por `categoria.id`; ordenar los grupos por `categoria.orden`
+  (desempate `nombre`); dentro del grupo, el orden de llegada (ya viene por
+  `orden` de servicio desde el server). `null` ⇒ "Otros" al final.
+- Categoría sin servicios activos no aparece (como hoy). Los desplegables
+  (2026-09-21) no cambian. `categoriasAbiertas` pasa de labels a ids.
+- El nombre se muestra en mayúsculas por CSS (`text-transform: uppercase`),
+  no con el string — Camila lo escribe como quiera.
+- Borrar de `constants.ts`: `CATEGORIAS_SERVICIO`, `CategoriaServicio`,
+  `NOMBRE_A_CATEGORIA`, `categoriaDe`. Queda `CATEGORIA_FALLBACK`.
+- No se crea `GET /api/categorias` público.
+- **ORDEN DE DEPLOY:** client-publico sale DESPUÉS del backfill (si no, todo
+  cae en "Otros").
 
 
 ### 4.13 Favicon + footer de contacto (client-publico, y favicon en client) — mockup cerrado
@@ -3490,6 +3535,13 @@ limpios (174 módulos). Sin contradicciones con §1–§16.
 
 ### Categorización visual de servicios en catálogo público — DECISIÓN CERRADA
 
+> **REEMPLAZADA 2026-11-16** por "Catálogo público: agrupado por categoría
+> real" (§4.11) y "Categorías autoadministrables" (§4.5): la categoría pasa a
+> ser campo real (`servicios.categoriaId` → colección `categorias`,
+> modelo-datos-turnos.md §4/§15.7.1). Lo de abajo ("NO se agrega campo
+> `categoria`", mapeo hardcodeado, orden fijo en el front) ya no rige; se
+> conserva como historial.
+
 Agrupación por categoría (UÑAS, CEJAS, PESTAÑAS, TRATAMIENTOS FACIALES,
 MASAJES) es puramente de presentación en `client-publico` — NO se agrega
 campo `categoria` al modelo (modelo-datos-turnos.md §4 servicios sigue
@@ -3656,6 +3708,11 @@ hardcodeado en `constants.ts`, orden fijo de categorías, bucket `Otros` al
 final (también desplegable, mismo comportamiento), riesgo aceptado del mapeo
 por nombre exacto. Sin cambios en modelo, API ni `@shared`. El acordeón
 servicio → imagen → profesionales de adentro no cambia.
+
+> **Parcialmente REEMPLAZADA 2026-11-16:** el comportamiento desplegable
+> sigue vigente tal cual; lo de "mapeo hardcodeado", "orden fijo de
+> categorías" y "sin cambios en modelo, API ni `@shared`" quedó reemplazado
+> por "Catálogo público: agrupado por categoría real" (§4.11).
 
 **Comportamiento**
 - Todas cerradas al entrar. Varias pueden estar abiertas a la vez
@@ -4380,6 +4437,10 @@ constants.ts. Pedido de Camila (2026-11-03).
   hasta un deploy. Camila va a cargar más servicios ⇒ pendiente mover la
   categoría al modelo (diseño cerrado en el chat, implementación a
   decidir).
+  > **REEMPLAZADA 2026-11-16:** ese "diseño cerrado en el chat" (con enum)
+  > nunca se implementó y quedó reemplazado por categorías
+  > autoadministrables (§4.5 "Categorías autoadministrables", §4.11
+  > "Catálogo público: agrupado por categoría real").
 
 ### 2026-11-05 (Claude Code) — Implementación: categoría MAQUILLAJE Y PEINADO + vaciado de "Otros" (client-publico)
 
@@ -4568,3 +4629,128 @@ G. **Anterior / Siguiente / Hoy.** Con un día elegido, cada uno ⇒ cambia de
    semana, sin `dia` en la URL, sin banner, input vacío.
 H. **URL inválida.** `?semana=2027-02-08&dia=2027-03-01` (fuera de la
    semana) y `&dia=basura` ⇒ se ve la semana sin marca ni banner.
+
+### 2026-11-16 (Claude Code) — Implementación: categorías de servicio autoadministrables (panel §4.5 + client-publico §4.11)
+
+Implementa "Categorías autoadministrables" (§4.5) y "Catálogo público:
+agrupado por categoría real" (§4.11). Backend en modelo-datos-turnos.md §17
+(misma fecha). Sin contradicciones con §1-4 de este archivo.
+
+**Archivos tocados (panel):** `client/src/routes/servicios/types.ts`,
+`api.ts`, `ServiciosPage.tsx`, `ServiciosPage.css`,
+`components/ServicioDrawer.tsx`, `components/FilaServicio.tsx`,
+`components/CategoriasDrawer.tsx` (nuevo).
+**Archivos tocados (client-publico):** `src/routes/reserva/constants.ts`,
+`types.ts`, `components/Catalogo.tsx`, `ReservaPage.tsx`.
+
+**Qué se hizo (panel)**
+- `types.ts`: `ServicioPanel.categoriaId: string | null` + `CategoriaPanel`
+  espejado. `api.ts`: `listar/crear/editar/eliminarCategoria`.
+- `ServiciosPage`: carga servicios + categorías en paralelo; head con botón
+  "Categorías" (secondary) junto a "+ Nuevo servicio"; resuelve el nombre de
+  categoría por id para cada fila (id huérfano ⇒ "Sin categoría", igual que
+  la web). Desde el drawer de categorías se recargan sólo las categorías
+  (sin el "Cargando…" de la lista).
+- `CategoriasDrawer`: copy fijo arriba ("Las categorías sin servicios activos
+  no se muestran en la web."); lista por `orden` (desempate nombre) con
+  nombre + "Orden N · N servicios"; Editar ⇒ la fila pasa a inputs
+  nombre/orden con Guardar/Cancelar; Eliminar ⇒ confirmación inline
+  "¿Eliminar? No se puede deshacer." (patrón FilaExcepcion). 409
+  `CATEGORIA_CON_SERVICIOS` ⇒ aviso bajo la fila: "Tiene N servicios activos:
+  X, Y. Pasalos a otra categoría antes de borrarla." (singular "1 servicio
+  activo"). 409 `NOMBRE_DUPLICADO` inline bajo el nombre (alta y edición).
+  Alta inline abajo: nombre + orden (sugerido: máximo + 1) + "Agregar"
+  (Enter en el nombre también agrega). Validación local con los schemas
+  reales de `@shared` (`crearCategoriaSchema`/`editarCategoriaSchema`).
+- `ServicioDrawer`: select "Categoría" (antes de Descripción) con las
+  categorías por orden + "Sin categoría (aparece en Otros)" ⇒ manda `null`.
+  `categoriaId` viaja SIEMPRE en el payload (null explícito), así elegir
+  "Sin categoría" en una edición la saca de verdad. Un id huérfano arranca en
+  "Sin categoría".
+- `FilaServicio`: columna nueva "Categoría" (oculta en ≤820px junto a
+  duración/limpieza/precio); "Sin categoría" en gris.
+
+**Qué se hizo (client-publico)**
+- `constants.ts`: borrados `CATEGORIAS_SERVICIO`, `CategoriaServicio`,
+  `NOMBRE_A_CATEGORIA`, `categoriaDe`. Queda `CATEGORIA_FALLBACK` y se suma
+  `CATEGORIA_OTROS_ID = 'otros'` (clave del bucket "Otros" en
+  `categoriasAbiertas`, no choca con un ObjectId).
+- `types.ts`: `ServicioPublico.categoria: CategoriaPublica | null`.
+- `Catalogo.tsx`: agrupa por `categoria.id`, ordena grupos por `orden`
+  (desempate nombre, `localeCompare` es/base), "Otros" al final; dentro del
+  grupo, orden de llegada. Sólo hay grupos con servicios (el server manda
+  sólo activos). Header muestra `categoria.nombre` tal cual — mayúsculas por
+  el `text-transform: uppercase` que `.categoria-nombre` ya tenía. ids de
+  header/panel ahora por id de categoría (antes por índice).
+- `ReservaPage.tsx`: `categoriasAbiertas` guarda ids (sólo renombres y
+  comentario; la lógica ya era genérica).
+
+**Descartado:** drag-and-drop de orden (trade-off aceptado en la decisión);
+endpoint público de categorías (la decisión lo descarta); mostrar en el
+panel el aviso de que una categoría con 0 servicios activos no se ve en la
+web por fila (el copy fijo arriba del drawer lo cubre).
+
+**Verificación**
+- `npm run typecheck` (4 paquetes) OK; `npm run build` de `client` (warning
+  de chunk >500 kB preexistente) y `client-publico` OK.
+- `client`/`client-publico` siguen sin infra de test — UI verificada por
+  typecheck/build y lectura; chequeo en navegador pendiente, guion abajo.
+
+#### Guión de prueba manual
+
+**0. ORDEN DE DEPLOY OBLIGATORIO** (prod, y también para la prueba en dev):
+server → backfill dry-run → backfill `--apply` → panel + client-publico. Si
+client-publico sale antes del backfill, todo el catálogo cae en "Otros". El
+panel nuevo contra un server viejo muestra error en /servicios.
+
+**1. Backfill contra la base de DEV** (`server/.env` apuntando a dev — revisar
+`MONGODB_URI` antes de correr):
+1. `npm run backfill:categorias --workspace=server` ⇒ dice "DRY-RUN",
+   lista las 6 categorías "a crear" y cada servicio → categoría. Revisar la
+   sección "⚠ Sin match": esos quedan en "Otros". Confirmar en Compass/Atlas
+   que NO se creó la colección `categorias` ni cambió ningún servicio.
+2. `npm run backfill:categorias --workspace=server -- --apply` ⇒ "APLICADO",
+   mismos números. En la base: 6 docs en `categorias` (Uñas, Cejas,
+   Pestañas, Tratamientos faciales, Masajes, Maquillaje y peinado; orden
+   0-5) y `categoriaId` seteado en los servicios mapeados. Verificar en
+   `db.categorias.getIndexes()` que el índice `nombre_1` tiene
+   `collation: { locale: 'es', strength: 2 }`.
+3. Correr `--apply` de nuevo ⇒ "Categorías creadas: (ninguna)", "asignados:
+   0", "ya categorizados: N".
+
+**2. Web pública** (`npm run dev`, `http://localhost:5174`):
+1. Mismas categorías que antes, mismo orden (Uñas … Maquillaje y peinado),
+   en MAYÚSCULAS, todas cerradas. "Otros" sólo si hubo sin-match.
+2. Abrir dos categorías ⇒ quedan las dos abiertas; elegir profesional ⇒
+   paso 2 ⇒ "Cambiar" vuelve con la categoría y el servicio abiertos.
+3. DevTools → Network → `/api/servicios`: cada servicio trae `categoria:
+   {id, nombre, orden}` o `null`; no aparece `categoriaId`.
+
+**3. Panel** (`http://localhost:5173/servicios`, como admin):
+1. Lista con columna "Categoría" (nombre o "Sin categoría" en gris). En
+   ≤820px la columna se oculta.
+2. "Categorías" ⇒ drawer con el copy "Las categorías sin servicios activos no
+   se muestran en la web." y las 6 en orden con "N servicios".
+3. Alta: "Depilación", orden sugerido 6 ⇒ "Agregar" ⇒ aparece con "0
+   servicios". En la web NO aparece (no tiene servicios activos).
+4. Alta con "uñas" ⇒ "Ya existe una categoría con ese nombre." bajo el nombre.
+   Con "U" ⇒ mensaje de 2 a 40 caracteres.
+5. Editar "Depilación" ⇒ orden 0 ⇒ Guardar ⇒ pasa primera en la lista.
+   Renombrarla a "CEJAS" ⇒ error de duplicado inline.
+6. Editar un servicio ⇒ select "Categoría" ⇒ "Depilación" ⇒ Guardar ⇒ la fila
+   lo muestra; el drawer de categorías dice "1 servicio"; en la web aparece
+   DEPILACIÓN primera (orden 0) con ese servicio.
+7. Eliminar "Depilación" ⇒ confirmación inline ⇒ "Sí, eliminar" ⇒ "Tiene 1
+   servicio activo: <nombre>. Pasalos a otra categoría antes de borrarla." y
+   no se borra.
+8. Volver el servicio a "Sin categoría (aparece en Otros)" ⇒ en la web cae
+   en "Otros", al final. Eliminar "Depilación" ⇒ desaparece.
+9. Caso inactivos: asignar un servicio a una categoría nueva, desactivarlo,
+   eliminar la categoría ⇒ se borra (204) y el servicio queda "Sin
+   categoría".
+10. Logueada como profesional, `/api/admin/categorias` ⇒ 403 (no hay botón,
+    la pantalla ya es admin-only).
+
+**4. Prod:** repetir el paso 1 (dry-run ⇒ revisar sin-match ⇒ `--apply`)
+contra la base de prod DESPUÉS del deploy del server y ANTES de deployar
+panel + client-publico. Después, chequeo rápido de los pasos 2.1 y 3.2.

@@ -4,7 +4,7 @@ import type { CrearServicioInput, EditarServicioInput } from '@shared/schemas/se
 import type { HorarioDia } from '@shared/schemas/common.schema';
 import { Button, Drawer, Input, Switch } from '../../../components/ui';
 import { EditorHorarios, type EditorHorariosHandle } from '../../../components/EditorHorarios/EditorHorarios';
-import type { ServicioPanel } from '../types';
+import type { CategoriaPanel, ServicioPanel } from '../types';
 
 export type ResultadoGuardar = { ok: true } | { ok: false; errorNombre?: string };
 
@@ -14,6 +14,7 @@ export interface ServicioDrawerProps {
   // Para el chequeo optimista de nombre duplicado — la verdad la tiene el
   // índice del server (409 real, ver onGuardar/mapeo en ServiciosPage).
   serviciosExistentes: ServicioPanel[];
+  categorias: CategoriaPanel[];
   guardando: boolean;
   toggleOcupado: boolean;
   onGuardar: (payload: CrearServicioInput | EditarServicioInput) => Promise<ResultadoGuardar>;
@@ -37,6 +38,7 @@ const MENSAJE_CAMPO: Record<string, string> = {
 export function ServicioDrawer({
   servicio,
   serviciosExistentes,
+  categorias,
   guardando,
   toggleOcupado,
   onGuardar,
@@ -53,10 +55,20 @@ export function ServicioDrawer({
   const [horarios, setHorarios] = useState<HorarioDia[] | null>(servicio?.horarios ?? null);
   const [imagenUrl, setImagenUrl] = useState(servicio?.imagenUrl ?? '');
   const [imagenInvalida, setImagenInvalida] = useState(false);
+  // '' = "Sin categoría" en el <select>; se manda como null (§15.7.1). Un id
+  // huérfano (categoría borrada) no matchea ninguna opción ⇒ arranca en ''.
+  const [categoriaId, setCategoriaId] = useState(() => {
+    const actual = servicio?.categoriaId ?? '';
+    return categorias.some((c) => c.id === actual) ? actual : '';
+  });
   const [errores, setErrores] = useState<Record<string, string>>({});
 
   const editorRef = useRef<EditorHorariosHandle>(null);
   const descripcionId = useId();
+  const categoriaSelectId = useId();
+  const categoriasOrdenadas = [...categorias].sort(
+    (a, b) => a.orden - b.orden || a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
+  );
 
   function validar(): CrearServicioInput | EditarServicioInput | null {
     const datos = {
@@ -78,6 +90,9 @@ export function ServicioDrawer({
       // undefined si el campo está vacío, así el key ni viaja en el JSON y
       // un PATCH no toca una imagen ya cargada.
       imagenUrl: imagenUrl.trim() || undefined,
+      // Siempre explícito: null = "Sin categoría (aparece en Otros)" — en un
+      // PATCH, null saca al servicio de la categoría (§15.7.1).
+      categoriaId: categoriaId || null,
     };
 
     const nuevosErrores: Record<string, string> = {};
@@ -156,6 +171,25 @@ export function ServicioDrawer({
           placeholder="Ej: Perfilado de cejas"
           error={errores.nombre}
         />
+      </div>
+
+      <div className="servicio-drawer__campo">
+        <label className="input-field__label" htmlFor={categoriaSelectId}>
+          Categoría
+        </label>
+        <select
+          id={categoriaSelectId}
+          className="servicio-drawer__select"
+          value={categoriaId}
+          onChange={(e) => setCategoriaId(e.target.value)}
+        >
+          {categoriasOrdenadas.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nombre}
+            </option>
+          ))}
+          <option value="">Sin categoría (aparece en Otros)</option>
+        </select>
       </div>
 
       <div className="servicio-drawer__campo">

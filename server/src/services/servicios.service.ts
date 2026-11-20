@@ -19,6 +19,9 @@ interface ServicioLean {
   horarios: IHorarioDia[] | null;
   orden: number;
   imagenUrl?: string;
+  // Servicios previos al campo pueden no tenerlo en el documento (undefined)
+  // hasta el backfill — se normaliza a null en el mapper.
+  categoriaId?: Types.ObjectId | null;
   activo: boolean;
   creadoEn: Date;
   actualizadoEn: Date;
@@ -37,6 +40,7 @@ export interface ServicioPanel {
   horarios: IHorarioDia[] | null;
   orden: number;
   imagenUrl?: string;
+  categoriaId: string | null; // null = sin categoría ("Otros" en la web, §15.7.1)
   activo: boolean;
   creadoEn: string;
   actualizadoEn: string;
@@ -54,6 +58,7 @@ function mapServicioParaPanel(servicio: ServicioLean): ServicioPanel {
     horarios: servicio.horarios,
     orden: servicio.orden,
     imagenUrl: servicio.imagenUrl,
+    categoriaId: servicio.categoriaId ? servicio.categoriaId.toString() : null,
     activo: servicio.activo,
     creadoEn: servicio.creadoEn.toISOString(),
     actualizadoEn: servicio.actualizadoEn.toISOString(),
@@ -72,6 +77,7 @@ export async function crearServicioPanel(input: CrearServicioInput): Promise<Ser
       horarios: input.horarios,
       orden: input.orden,
       imagenUrl: input.imagenUrl,
+      categoriaId: input.categoriaId ?? null,
       // activo: no viene del input (el schema no lo declara) — nace true por
       // default del modelo.
     });
@@ -125,7 +131,9 @@ export async function editarServicioPanel(id: string, input: EditarServicioInput
   }
 }
 
-function esNombreDuplicado(err: unknown): boolean {
+// Exportado: categorias.service.ts mapea el mismo E11000 al mismo código
+// (409 NOMBRE_DUPLICADO, §15.7.1).
+export function esNombreDuplicado(err: unknown): boolean {
   return (
     typeof err === 'object' &&
     err !== null &&

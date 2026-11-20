@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { Types } from 'mongoose';
-import { Servicio, Usuario } from '../models';
+import { Categoria, Servicio, Usuario } from '../models';
 import { ApiError } from '../utils/apiError';
 
 // Reads públicos de soporte — modelo-datos-turnos.md §15.3.
@@ -31,10 +31,18 @@ export function crearServiciosRouter(): Router {
 
   serviciosRouter.get('/', async (_req, res, next) => {
     try {
-      const servicios = await Servicio.find({ activo: true })
-        .sort({ orden: 1 })
-        .select('nombre descripcion duracionMin precio mostrarPrecio imagenUrl')
-        .lean();
+      const [servicios, categorias] = await Promise.all([
+        Servicio.find({ activo: true })
+          .sort({ orden: 1 })
+          .select('nombre descripcion duracionMin precio mostrarPrecio imagenUrl categoriaId')
+          .lean(),
+        // Colección chica (§15.7.1): un find() entero + Map en memoria, sin
+        // $lookup. Sin GET /api/categorias público — la categoría viaja acá.
+        Categoria.find({}).select('nombre orden').lean(),
+      ]);
+      const categoriaPorId = new Map(
+        categorias.map((c) => [c._id.toString(), { id: c._id.toString(), nombre: c.nombre, orden: c.orden }])
+      );
 
       // Nunca horarios, buffer ni campos internos — sólo lo que la web muestra.
       res.json(
@@ -45,6 +53,8 @@ export function crearServiciosRouter(): Router {
           duracionMin: s.duracionMin,
           ...(s.mostrarPrecio ? { precio: s.precio } : {}),
           ...(s.imagenUrl ? { imagenUrl: s.imagenUrl } : {}),
+          // null = "Otros". Huérfano (categoría borrada en carrera) ⇒ null.
+          categoria: (s.categoriaId && categoriaPorId.get(s.categoriaId.toString())) || null,
         }))
       );
     } catch (err) {

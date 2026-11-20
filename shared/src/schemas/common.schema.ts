@@ -5,6 +5,13 @@ import { Intervalo, solapan } from '../utils/intervalos';
 // (ver modelo-datos-turnos.md §4 y §10). Sin cruce de medianoche: limitación
 // conocida y aceptada.
 
+// ObjectId de Mongo, formato únicamente — NO valida existencia contra la base
+// (round-trip por poco; un id inexistente es inocuo en todos los usos:
+// usuario.servicios, excepcion.profesionalId, servicio.categoriaId). Antes
+// estaba duplicado en usuario.schema.ts y excepcion.schema.ts
+// (modelo-datos-turnos.md §15.7.1).
+export const objectIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/, 'id inválido');
+
 export const diaSemanaSchema = z.number().int().min(0).max(6);
 
 const HHMM_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;

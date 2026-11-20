@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { horariosServicioSchema } from './common.schema';
+import { horariosServicioSchema, objectIdSchema } from './common.schema';
+
+// categoriaId (modelo-datos-turnos.md §4/§15.7.1): referencia viva a
+// `categorias`, null = "Otros". null explícito en PATCH = sacar de la
+// categoría. No se valida existencia contra la base (mismo criterio que
+// usuario.servicios §15.9) — un huérfano lo resuelve el GET público como null.
+const categoriaIdSchema = objectIdSchema.nullable().optional();
 
 // CRUD administrativo de servicios (modelo-datos-turnos.md §15.7).
 // `activo` NO se acepta al crear — nace true (default del modelo); no está
@@ -19,6 +25,7 @@ export const crearServicioSchema = z.object({
   // vaciarla vía '' — no está en la decisión cerrada, y un PATCH que omite
   // la key ya deja la imagen vieja intacta (semántica estándar de $set).
   imagenUrl: z.string().url().optional(),
+  categoriaId: categoriaIdSchema,
 });
 export type CrearServicioInput = z.infer<typeof crearServicioSchema>;
 
@@ -35,5 +42,6 @@ export const editarServicioSchema = z.object({
   orden: z.number().int().optional(),
   activo: z.boolean().optional(),
   imagenUrl: z.string().url().optional(),
+  categoriaId: categoriaIdSchema,
 });
 export type EditarServicioInput = z.infer<typeof editarServicioSchema>;

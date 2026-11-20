@@ -323,6 +323,32 @@ describe('PATCH /api/admin/servicios/:id', () => {
     expect(res.status).toBe(200);
     expect(res.body.activo).toBe(true);
   });
+
+  // §15.7.1 — categoriaId: asignar, y null explícito = sacar de la categoría.
+  it('PATCH categoriaId asigna; PATCH categoriaId:null ⇒ queda null', async () => {
+    await crearUsuario({ email: 'admin1@test.com', rol: 'admin' });
+    const agente = await loguearAgente('admin1@test.com');
+    const categoriaId = new Types.ObjectId().toString(); // no se valida existencia (§15.9)
+
+    const creado = await agente.post('/api/admin/servicios').send(bodyServicioValido());
+    expect(creado.body.categoriaId).toBeNull();
+
+    const asignado = await agente.patch(`/api/admin/servicios/${creado.body.id}`).send({ categoriaId });
+    expect(asignado.status).toBe(200);
+    expect(asignado.body.categoriaId).toBe(categoriaId);
+
+    // Omitir la key no la toca.
+    const otroCampo = await agente.patch(`/api/admin/servicios/${creado.body.id}`).send({ precio: 1 });
+    expect(otroCampo.body.categoriaId).toBe(categoriaId);
+
+    const sacado = await agente.patch(`/api/admin/servicios/${creado.body.id}`).send({ categoriaId: null });
+    expect(sacado.status).toBe(200);
+    expect(sacado.body.categoriaId).toBeNull();
+    expect((await Servicio.findById(creado.body.id).lean())!.categoriaId).toBeNull();
+
+    const malformado = await agente.patch(`/api/admin/servicios/${creado.body.id}`).send({ categoriaId: 'xyz' });
+    expect(malformado.status).toBe(400);
+  });
 });
 
 describe('namespace /api/admin — ownership por rol', () => {

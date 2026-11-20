@@ -1,54 +1,13 @@
-// Agrupado del catálogo por categoría (paso 1, acordeón — frontend.md §4.11
-// punto 3a). Mapeo hardcodeado nombre→categoría, SOLO para presentación en
-// client-publico: no existe "categoría" en el modelo ni en @shared, y no se
-// agrega ahí a propósito (decisión de esta tarea, no reabre el modelo).
+// Agrupado del catálogo por categoría (paso 1 — frontend.md §4.11, "Catálogo
+// público: agrupado por categoría real", 2026-11-16). La categoría es dato:
+// llega en GET /api/servicios como `categoria: { id, nombre, orden } | null`
+// (modelo-datos-turnos.md §15.7.1). El mapeo hardcodeado nombre→categoría que
+// vivía acá se borró (lo copió el script de backfill del server).
 //
-// Match case-insensitive (.toLowerCase()) para no romper por una mayúscula
-// editada desde el panel. Cualquier servicio activo no listado acá cae en
-// "Otros" (CATEGORIA_FALLBACK), al final.
-export const CATEGORIAS_SERVICIO = [
-  'UÑAS',
-  'CEJAS',
-  'PESTAÑAS',
-  'TRATAMIENTOS FACIALES',
-  'MASAJES',
-  'MAQUILLAJE Y PEINADO',
-] as const;
-
-export type CategoriaServicio = (typeof CATEGORIAS_SERVICIO)[number];
-
+// Servicio con `categoria: null` (sin categoría, o id huérfano) cae en "Otros",
+// al final.
 export const CATEGORIA_FALLBACK = 'Otros';
 
-const NOMBRE_A_CATEGORIA: Record<string, CategoriaServicio> = {
-  'esmaltado semipermanente': 'UÑAS',
-  'kapping gel': 'UÑAS',
-  'extensión soft gel': 'UÑAS',
-  'semis en manos y pies': 'UÑAS',
-  'soft gel en manos y semis en pies': 'UÑAS',
-  retirados: 'UÑAS',
-
-  'diseño y perfilado de cejas': 'CEJAS',
-  'laminado de cejas': 'CEJAS',
-
-  'lifting tradicional': 'PESTAÑAS',
-  'lifting técnica coreana': 'PESTAÑAS',
-
-  'limpieza profunda + espátula ultrasónica': 'TRATAMIENTOS FACIALES',
-  'limpieza profunda + peeling químico + masaje anti age': 'TRATAMIENTOS FACIALES',
-  'limpieza profunda + electroporador + espátula ultrasónica': 'TRATAMIENTOS FACIALES',
-  'limpieza profunda + máscara led y máscara gold': 'TRATAMIENTOS FACIALES',
-  'limpieza facial profunda': 'TRATAMIENTOS FACIALES',
-  'limpieza + dermapen': 'TRATAMIENTOS FACIALES',
-  dermaplaning: 'TRATAMIENTOS FACIALES',
-  hydralips: 'TRATAMIENTOS FACIALES',
-
-  'reflexología podal': 'MASAJES',
-  'reflexología podal opción 2': 'MASAJES',
-
-  'maquillaje social': 'MAQUILLAJE Y PEINADO',
-  peinados: 'MAQUILLAJE Y PEINADO',
-};
-
-export function categoriaDe(nombreServicio: string): CategoriaServicio | typeof CATEGORIA_FALLBACK {
-  return NOMBRE_A_CATEGORIA[nombreServicio.trim().toLowerCase()] ?? CATEGORIA_FALLBACK;
-}
+// Clave del bucket "Otros" en `categoriasAbiertas` (que guarda ids). No puede
+// chocar con un ObjectId real (24 hex).
+export const CATEGORIA_OTROS_ID = 'otros';

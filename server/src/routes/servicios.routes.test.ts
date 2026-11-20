@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
-import { Servicio, Usuario } from '../models';
+import { Types } from 'mongoose';
+import { Categoria, Servicio, Usuario } from '../models';
 import { createApp } from '../app';
 import { conectarDbTest, desconectarDbTest, limpiarDbTest } from '../test/dbTestSetup';
 
@@ -105,6 +106,29 @@ describe('GET /api/servicios', () => {
 
     const sinFoto = res.body.find((s: { nombre: string }) => s.nombre === 'Sin foto');
     expect(sinFoto).not.toHaveProperty('imagenUrl');
+  });
+
+  // §15.7.1 — categoria: { id, nombre, orden } | null, resuelta en el server.
+  it('categoria: poblada si existe, null si no tiene, null si el id quedó huérfano', async () => {
+    const unas = await Categoria.create({ nombre: 'Uñas', orden: 2 });
+    const base = { duracionMin: 30, bufferPostMin: 0, precio: 500000, mostrarPrecio: true, horarios: null, activo: true };
+    await Servicio.create([
+      { ...base, nombre: 'Con categoría', orden: 0, categoriaId: unas._id },
+      { ...base, nombre: 'Sin categoría', orden: 1, categoriaId: null },
+      { ...base, nombre: 'Huérfano', orden: 2, categoriaId: new Types.ObjectId() },
+    ]);
+    // Documento previo al campo (sin categoriaId en Mongo) — retrocompatible.
+    await Servicio.collection.insertOne({ ...base, nombre: 'Legacy', orden: 3, creadoEn: new Date(), actualizadoEn: new Date() });
+
+    const res = await request(app).get('/api/servicios');
+    expect(res.status).toBe(200);
+    const porNombre = Object.fromEntries(res.body.map((s: { nombre: string; categoria: unknown }) => [s.nombre, s.categoria]));
+
+    expect(porNombre['Con categoría']).toEqual({ id: unas._id.toString(), nombre: 'Uñas', orden: 2 });
+    expect(porNombre['Sin categoría']).toBeNull();
+    expect(porNombre['Huérfano']).toBeNull();
+    expect(porNombre['Legacy']).toBeNull();
+    expect(res.body[0]).not.toHaveProperty('categoriaId');
   });
 });
 
