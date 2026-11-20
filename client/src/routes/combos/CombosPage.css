@@ -1,0 +1,131 @@
+/* Combos y experiencias — panel (frontend.md §4.5.1). Lista + editor de
+   "Incluye". El resto (head, tags, campos del drawer, preview de imagen)
+   reusa ServiciosPage.css. */
+
+.fila-combo-grupo {
+  background: var(--color-blanco);
+  border: var(--borde-hairline);
+  border-radius: var(--radio-card);
+  overflow: hidden;
+}
+
+.fila-combo {
+  display: grid;
+  grid-template-columns: 2.4fr 90px 130px 96px;
+  align-items: center;
+  gap: 14px;
+  padding: 0.94rem 1.1rem;
+  border-top: var(--borde-hairline);
+  cursor: pointer;
+}
+
+.fila-combo-grupo .fila-combo:first-child {
+  border-top: 0;
+}
+
+.fila-combo:hover,
+.fila-combo:focus-visible {
+  background: #fbfbfd;
+}
+
+.fila-combo--header {
+  cursor: default;
+  background: #fbfbfd;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-tinta-48);
+}
+
+.fila-combo--inactivo {
+  opacity: 0.5;
+}
+
+.fila-combo__celda {
+  font-size: 0.81rem;
+  color: var(--color-tinta-72);
+  min-width: 0;
+}
+
+.fila-combo__nombre-texto {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-tinta);
+}
+
+.fila-combo__desc {
+  font-size: 0.75rem;
+  color: var(--color-tinta-48);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fila-combo__precio-oculto {
+  display: block;
+  font-size: 0.66rem;
+  color: var(--color-tinta-48);
+  font-weight: 600;
+}
+
+/* Editor de "Incluye" (drawer) */
+.combo-drawer__label {
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.combo-drawer__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.combo-drawer__item-fila {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.combo-drawer__item-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Mismo lenguaje que .input-field--error del Input del kit. */
+.combo-drawer__item-input--error {
+  border-color: var(--color-error-texto);
+  box-shadow: 0 0 0 3px rgba(143, 50, 44, 0.1);
+}
+
+.combo-drawer__item .input-field__error,
+.combo-drawer__items-pie + .input-field__error {
+  margin-top: 0.3rem;
+}
+
+.combo-drawer__items-pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.6rem;
+}
+
+.combo-drawer__items-cuenta {
+  margin: 0;
+}
+
+@media (max-width: 820px) {
+  .fila-combo,
+  .fila-combo--header {
+    grid-template-columns: 1fr auto auto;
+  }
+
+  .fila-combo__items {
+    display: none;
+  }
+}

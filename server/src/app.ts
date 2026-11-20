@@ -5,6 +5,7 @@ import { crearTurnoSchema } from '@shared/schemas/turno.schema';
 import { crearTurnosRouter } from './routes/turnos.routes';
 import { crearDisponibilidadRouter } from './routes/disponibilidad.routes';
 import { crearServiciosRouter } from './routes/servicios.routes';
+import { crearExperienciasRouter } from './routes/experiencias.routes';
 import { crearAuthRouter } from './routes/auth.routes';
 import { adminRouter } from './routes/admin';
 import { miRouter } from './routes/mi.routes';
@@ -50,6 +51,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   app.use('/api/turnos', crearTurnosRouter());
   app.use('/api/disponibilidad', crearDisponibilidadRouter());
   app.use('/api/servicios', crearServiciosRouter());
+  app.use('/api/experiencias', crearExperienciasRouter()); // combos, §15.7.2
   app.use('/api/admin', adminRouter);
   app.use('/api/mi', miRouter);
 

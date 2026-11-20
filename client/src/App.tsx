@@ -7,6 +7,7 @@ import { TurnosPage } from './routes/turnos/TurnosPage';
 import { AgendaPage } from './routes/agenda/AgendaPage';
 import { MiPerfilPage } from './routes/mi/MiPerfilPage';
 import { ServiciosPage } from './routes/servicios/ServiciosPage';
+import { CombosPage } from './routes/combos/CombosPage';
 import { ProfesionalesPage } from './routes/profesionales/ProfesionalesPage';
 import { ConfiguracionPage } from './routes/configuracion/ConfiguracionPage';
 import { ExcepcionesPage } from './routes/excepciones/ExcepcionesPage';
@@ -30,6 +31,7 @@ function App() {
 
           <Route element={<RequireRol roles={['admin']} />}>
             <Route path="/servicios" element={<ServiciosPage />} />
+            <Route path="/combos" element={<CombosPage />} />
             <Route path="/profesionales" element={<ProfesionalesPage />} />
             <Route path="/configuracion" element={<ConfiguracionPage />} />
             <Route path="/excepciones" element={<ExcepcionesPage />} />

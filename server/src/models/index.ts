@@ -2,6 +2,7 @@ export * from './subschemas/horario.subschema';
 export * from './configuracion.model';
 export * from './servicio.model';
 export * from './categoria.model';
+export * from './experiencia.model';
 export * from './usuario.model';
 export * from './excepcion.model';
 export * from './cliente.model';

@@ -439,6 +439,29 @@ se ve en la web hasta que tenga un servicio activo.
 todo el catálogo cae en "Otros".
 
 
+### 4.5.1 Pantalla: Combos y experiencias (panel, admin) — DECISIÓN 2026-11-19
+
+Backend en modelo-datos-turnos.md §4 (`experiencias`) y §15.7.2
+(`/api/admin/experiencias`). Consume `ExperienciaPanel`. Los combos NO se
+agendan (día y pago por WhatsApp) — no tocan servicios/agenda/turnos.
+
+- Ruta nueva `/combos` detrás de `RequireRol(['admin'])` + item de nav
+  "Combos" con `rolesPermitidos: ['admin']` (ícono nuevo en `NavIcon`).
+- Mismo patrón que Servicios (§4.5): lista (incl. inactivos, atenuados) con
+  nombre, cantidad de ítems incluidos, precio (+ "oculto en la web" si
+  `!mostrarPrecio`) y estado.
+- Drawer de alta/edición: nombre, descripción (contador /500), "Incluye" como
+  lista editable (input por ítem, "Agregar ítem", quitar; mínimo 2 y máximo
+  8, con error inline), precio en PESOS que se manda en centavos, switch
+  "Mostrar el precio en la web", imagen con preview 16/9 e "Imagen no
+  válida" en `onError` (igual que ServicioDrawer), orden, y
+  Desactivar/Activar en el footer (nunca "Eliminar" — sin DELETE).
+- Validar con los schemas de `@shared` antes de enviar; `409
+  NOMBRE_DUPLICADO` inline bajo el nombre.
+- Fuera de alcance (fase 2): cobro online, gift card con código, registro de
+  vendidos/canjeados, tracking de clics.
+
+
 ### 4.6 Pantalla: CRUD de usuarios / profesionales (panel, admin) — mockup cerrado
 
 Bajo /api/admin/usuarios (§15.9), admin-only. Consume UsuarioPanel (nunca
@@ -790,6 +813,47 @@ enum del 2026-11-05. La categoría ahora es dato (modelo-datos-turnos.md §4
 - No se crea `GET /api/categorias` público.
 - **ORDEN DE DEPLOY:** client-publico sale DESPUÉS del backfill (si no, todo
   cae en "Otros").
+
+#### Catálogo público: Combos y experiencias (§4.11) — DECISIÓN 2026-11-19
+
+Combos de 2+ servicios para la clienta o para regalar. NO se agendan: el
+día y el pago se coordinan por WhatsApp. Consume `GET /api/experiencias`
+(modelo-datos-turnos.md §15.7.2): `_id, nombre, descripcion?, incluye,
+precio? (sólo si mostrarPrecio), imagenUrl?`.
+
+- **Fetch propio** en `ReservaPage`, independiente del de servicios. Si
+  falla o viene vacío ⇒ la sección y el link del hero NO se renderizan.
+  Nunca puede romper ni demorar el catálogo de turnos.
+- **Componente `Experiencias.tsx`**, montado DEBAJO del catálogo de
+  categorías y ARRIBA del footer, sólo en paso 1, con `id="combos"`.
+- **Bloque** con fondo `var(--color-tinta)` y radio grande; adentro, eyebrow
+  "Combos y experiencias" (uppercase tracked con CSS), título Fraunces "Para
+  vos o para regalar" y subtítulo "Elegís el combo y coordinamos el día por
+  WhatsApp.". Texto claro sobre tinta con tokens existentes
+  (`--color-papel` / `--color-linea-fuerte`); NO se agregan colores a
+  `tokens.css`.
+- **NO es desplegable:** las tarjetas se ven abiertas.
+- **Tarjeta** (fondo `var(--color-papel)`): imagen opcional 16/9
+  `object-fit: cover` con `loading="lazy"` (si dispara `onError` se oculta
+  el contenedor, igual que ServicioCard); nombre en Fraunces; descripción si
+  hay; eyebrow "Incluye" + lista con ícono check en
+  `--color-estado-confirmado-texto`; precio formateado ARS si viene (si no
+  viene, no se muestra nada en su lugar); dos botones lado a lado: "Lo
+  quiero" (sólido tinta) y "Quiero regalarlo" (outline, con ícono de regalo).
+- **Botones** = `<a target="_blank" rel="noopener">` a
+  `https://api.whatsapp.com/send?phone=<NUMERO>&text=<encodeURIComponent(msg)>`
+  con los mensajes EXACTOS:
+  - Lo quiero: `Hola! Me interesa el combo *{nombre}* para mí. ¿Me pasás info para coordinar? 🙌🏻`
+  - Quiero regalarlo: `Hola! Quiero regalar el combo *{nombre}* 🎁 ¿Cómo hacemos?`
+  El número (543364328062), hoy hardcodeado en el href del Footer, se
+  extrae a una constante en `constants.ts` que usan Footer y Experiencias.
+  El mensaje del footer NO cambia.
+- **Hero:** link chico "Combos para vos o para regalar" con ícono de regalo,
+  debajo del subtítulo, sólo si hay ≥1 combo. Scroll suave a `#combos`
+  (instantáneo con `prefers-reduced-motion`).
+- Mobile-first, mismo ancho máx 460px del `.app`. Sin tocar `tokens.css`.
+- Fuera de alcance (fase 2): cobro online, gift card con código, registro de
+  vendidos/canjeados, tracking de clics.
 
 
 ### 4.13 Favicon + footer de contacto (client-publico, y favicon en client) — mockup cerrado
@@ -4754,3 +4818,116 @@ panel nuevo contra un server viejo muestra error en /servicios.
 **4. Prod:** repetir el paso 1 (dry-run ⇒ revisar sin-match ⇒ `--apply`)
 contra la base de prod DESPUÉS del deploy del server y ANTES de deployar
 panel + client-publico. Después, chequeo rápido de los pasos 2.1 y 3.2.
+
+### 2026-11-19 (Claude Code) — Implementación: Combos y experiencias (panel §4.5.1 + client-publico §4.11)
+
+Implementa "Pantalla: Combos y experiencias" (§4.5.1) y "Catálogo público:
+Combos y experiencias" (§4.11). Backend en modelo-datos-turnos.md §17 (misma
+fecha). Sin contradicciones con §1-4 de este archivo.
+
+**Archivos (client-publico):** `routes/reserva/constants.ts`, `types.ts`,
+`api.ts`, `ReservaPage.tsx`, `ReservaPage.css`, `components/Footer.tsx`,
+`components/Experiencias.tsx` (nuevo). **NO se tocó** `tokens.css`,
+`Catalogo.tsx`, `ServicioCard.tsx`.
+**Archivos (panel):** `App.tsx`, `layout/nav.ts`, `layout/NavIcon.tsx`,
+`routes/combos/` (nuevo: `CombosPage.tsx`, `CombosPage.css`, `api.ts`,
+`types.ts`, `components/FilaCombo.tsx`, `components/ComboDrawer.tsx`).
+
+**Qué se hizo (client-publico)**
+- `constants.ts`: `WHATSAPP_NUMERO = '543364328062'` + `linkWhatsApp(texto)`
+  (encodea con `encodeURIComponent`). `Footer` usa la constante dentro de su
+  href; el resto del query string del footer quedó byte a byte igual (no se
+  re-encodeó su mensaje).
+- `ReservaPage`: `useEffect` propio para `GET /api/experiencias`, arranca en
+  `[]` y traga cualquier error (también AbortError). Con `[]` no se renderiza
+  ni la sección ni el link del hero; no hay estado de carga ⇒ no demora nada
+  del catálogo. Link del hero "Combos para vos o para regalar" (ícono de
+  regalo) bajo el subtítulo, `href="#combos"` + `scrollIntoView` smooth, o
+  `auto` si `prefers-reduced-motion`. `<Experiencias>` va después de
+  `<Catalogo>` dentro del bloque `paso === 1`, o sea arriba del Footer.
+- `Experiencias.tsx`: `<section id="combos">` con fondo tinta, radio 22px;
+  eyebrow/título Fraunces/subtítulo con los textos exactos; tarjetas abiertas
+  (fondo papel) con imagen 16/9 `loading="lazy"` que se oculta en `onError`,
+  nombre Fraunces, descripción, "Incluye" + checks en
+  `--color-estado-confirmado-texto`, precio ARS sólo si viene, y dos `<a
+  target="_blank" rel="noopener">` lado a lado con los mensajes EXACTOS de la
+  decisión. Texto claro sobre tinta con `--color-papel` (títulos) y
+  `--color-linea-fuerte` (eyebrow/subtítulo). `scroll-margin-top: 72px` para
+  que el header sticky no tape el eyebrow al saltar.
+
+**Qué se hizo (panel)**
+- Ruta `/combos` dentro del `RequireRol(['admin'])` existente; item "Combos"
+  (después de Servicios) con `rolesPermitidos: ['admin']`; ícono `combos`
+  (regalo) en `NavIcon`.
+- `CombosPage` + `FilaCombo`: mismo patrón que Servicios (lista ordenada por
+  `orden`, inactivos atenuados, columnas nombre(+desc) · "N ítems" · precio
+  (+ "oculto en la web") · estado). Reusa `ServiciosPage.css` (head, tags,
+  campos del drawer, preview) importándolo; lo propio va en `CombosPage.css`.
+- `ComboDrawer`: nombre, descripción con contador /500, "Incluye" como lista
+  editable (input por ítem, "Quitar" deshabilitado con 2, "+ Agregar ítem"
+  deshabilitado con 8, contador "N/8 · mínimo 2", error inline por ítem y a
+  nivel lista), precio en pesos ⇒ centavos, switch, imagen con preview 16/9
+  e "Imagen no válida", orden, Desactivar/Activar en el footer. Valida con
+  `crearExperienciaSchema`/`editarExperienciaSchema` (errores por `path` de
+  Zod) y manda el `parsed.data` (ítems ya trimeados). 409
+  `NOMBRE_DUPLICADO` inline bajo el nombre.
+
+**Descartado:** reintento/aviso si falla el fetch de combos (la decisión pide
+que no se renderice); estado "cargando" de la sección (demoraría el
+layout); drag-and-drop de ítems.
+
+**Verificación:** typecheck 4/4 y builds de `client`/`client-publico` OK.
+Sin infra de test en los fronts: chequeo en navegador pendiente, guion abajo.
+
+#### Guión de prueba manual
+
+`npm run dev` desde la raíz (server :4000, panel :5173, web :5174).
+
+**1. Crear 2 combos desde el panel** (admin, `/combos`)
+1. Nav: aparece "Combos" (con ícono de regalo) debajo de Servicios. Como
+   profesional, no aparece y `/combos` redirige.
+2. "+ Nuevo combo" ⇒ arranca con 2 ítems vacíos; "Quitar" deshabilitado.
+   Guardar vacío ⇒ errores inline en nombre y en cada ítem.
+3. Combo A: "Día de spa", 3 ítems, precio 45000, switch ON, sin imagen,
+   orden 0 ⇒ Guardar ⇒ toast, aparece en la lista con "3 ítems" y $45.000.
+4. Combo B: "Novias", 2 ítems, precio 80000, switch **OFF**, con una URL de
+   foto válida (ver preview 16/9), orden 1 ⇒ en la lista, "oculto en la web".
+5. Agregar ítems hasta 8 ⇒ "+ Agregar ítem" se deshabilita. Un ítem de 1
+   letra ⇒ error inline en ese ítem.
+6. Nuevo combo con "DÍA DE SPA" ⇒ "Ya existe un combo con ese nombre."
+   bajo el nombre. URL de imagen rota ⇒ "Imagen no válida".
+
+**2. Verlos en la web en mobile** (DevTools 390×844, `localhost:5174`)
+1. Bajo el subtítulo del hero: link "Combos para vos o para regalar".
+   Tocarlo ⇒ scroll suave hasta el bloque oscuro. Con "reducir movimiento"
+   activado en el SO/DevTools ⇒ salto instantáneo.
+2. El bloque está debajo de las categorías y arriba del footer: eyebrow
+   "COMBOS Y EXPERIENCIAS", "Para vos o para regalar", subtítulo.
+3. Tarjeta "Día de spa": sin imagen, 3 checks verdes, $45.000. Tarjeta
+   "Novias": con foto 16/9, SIN precio y sin hueco donde iría.
+4. Sin scroll horizontal; los dos botones entran lado a lado.
+
+**3. Tocar los dos botones y verificar el mensaje exacto en WhatsApp**
+1. "Lo quiero" en "Día de spa" ⇒ abre pestaña nueva de WhatsApp con:
+   `Hola! Me interesa el combo *Día de spa* para mí. ¿Me pasás info para coordinar? 🙌🏻`
+2. "Quiero regalarlo" en "Novias" ⇒
+   `Hola! Quiero regalar el combo *Novias* 🎁 ¿Cómo hacemos?`
+3. Footer ⇒ WhatsApp sigue con el mensaje de siempre ("Hola! Necesito un
+   turno y/o lista de precios de los servicios 🙌🏻").
+   (Desde desktop sin WhatsApp instalado, verificar el texto en
+   web.whatsapp.com o leyendo el `href` en DevTools.)
+
+**4. Pausar uno y confirmar que desaparece**
+1. Panel ⇒ abrir "Novias" ⇒ "Desactivar" ⇒ queda atenuado "Inactivo".
+2. Recargar la web ⇒ sólo "Día de spa". Desactivar también ése ⇒ recargar
+   ⇒ ni la sección ni el link del hero aparecen.
+3. Reactivar uno ⇒ vuelve.
+
+**5. Experiencias caído ⇒ la reserva de turnos sigue andando**
+1. DevTools ⇒ Network ⇒ "Block request URL" sobre `*/api/experiencias`
+   (o, alternativa, devolver error temporalmente en el router) ⇒ recargar.
+2. Sin sección de combos, sin link en el hero, sin mensaje de error; el
+   catálogo de categorías carga igual de rápido.
+3. Reservar un turno completo (servicio ⇒ profesional ⇒ horario ⇒ datos ⇒
+   éxito) ⇒ funciona normal.
+4. Quitar el bloqueo y recargar ⇒ vuelve la sección.

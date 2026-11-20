@@ -1,3 +1,5 @@
+import { WHATSAPP_NUMERO } from '../constants';
+
 // Footer de contacto (frontend.md §4.13, con la corrección de estilo fechada
 // 2026-09-10). SOLO se monta en el catálogo (paso 1) — decisión Web: mantener
 // el flujo transaccional (grilla/form/éxito) sin distracciones de marketing
@@ -20,7 +22,7 @@ export function Footer() {
         <div className="foot-links-inner">
           <a
             className="foot-link"
-            href="https://api.whatsapp.com/send?phone=543364328062&text=Hola!%20Necesito%20un%20turno%20y%2Fo%20lista%20de%20precios%20de%20los%20servicios%20%F0%9F%99%8C%F0%9F%8F%BB"
+            href={`https://api.whatsapp.com/send?phone=${WHATSAPP_NUMERO}&text=Hola!%20Necesito%20un%20turno%20y%2Fo%20lista%20de%20precios%20de%20los%20servicios%20%F0%9F%99%8C%F0%9F%8F%BB`}
             target="_blank"
             rel="noopener"
           >

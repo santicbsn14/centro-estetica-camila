@@ -16,6 +16,17 @@ export interface ServicioPublico {
   categoria: CategoriaPublica | null;
 }
 
+// GET /api/experiencias (modelo-datos-turnos.md §15.7.2). Los combos NO se
+// agendan: el día y el pago se coordinan por WhatsApp.
+export interface ExperienciaPublica {
+  _id: string;
+  nombre: string;
+  descripcion?: string;
+  incluye: string[]; // texto libre, 2..8
+  precio?: number; // centavos; ausente si !mostrarPrecio
+  imagenUrl?: string;
+}
+
 export interface CategoriaPublica {
   id: string;
   nombre: string; // como lo escribe Camila — mayúsculas sólo por CSS

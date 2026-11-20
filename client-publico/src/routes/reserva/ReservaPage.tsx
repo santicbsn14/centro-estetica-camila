@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import type { CrearTurnoInput } from '@shared/schemas/turno.schema';
 import { HttpError } from '../../lib/http';
 import { mensajeDeError } from '../../lib/errores';
@@ -8,15 +8,24 @@ import {
   diasConSlots,
   rangoDisponibilidadUtc,
 } from '../../lib/format/fecha';
-import { listarServicios, listarProfesionales, listarDisponibilidad, crearTurno } from './api';
+import { listarServicios, listarProfesionales, listarDisponibilidad, crearTurno, listarExperiencias } from './api';
 import { Catalogo } from './components/Catalogo';
+import { Experiencias, IconoRegalo, ID_SECCION_COMBOS } from './components/Experiencias';
 import { Grilla } from './components/Grilla';
 import { Calendario } from './components/Calendario';
 import { HojaDatos } from './components/HojaDatos';
 import { Exito } from './components/Exito';
 import { Footer } from './components/Footer';
 import { Toast, type ToastState } from './components/Toast';
-import type { Carga, DatosClienta, ProfesionalPublico, ServicioPublico, Slot, TurnoCreado } from './types';
+import type {
+  Carga,
+  DatosClienta,
+  ExperienciaPublica,
+  ProfesionalPublico,
+  ServicioPublico,
+  Slot,
+  TurnoCreado,
+} from './types';
 import './ReservaPage.css';
 
 // Único flujo de la web pública v1 (frontend.md §4.11). Un paso = una
@@ -109,6 +118,29 @@ export function ReservaPage() {
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // --- Combos y experiencias (frontend.md §4.11, 2026-11-19) ---
+  // Fetch propio, independiente del de servicios: arranca en [] (la sección y
+  // el link del hero no se renderizan) y cualquier error se traga — nunca
+  // puede romper ni demorar el catálogo de turnos. Sin reintento ni aviso.
+  const [experiencias, setExperiencias] = useState<ExperienciaPublica[]>([]);
+  useEffect(() => {
+    const controller = new AbortController();
+    listarExperiencias(controller.signal)
+      .then((datos) => setExperiencias(Array.isArray(datos) ? datos : []))
+      .catch(() => {
+        // Silencioso a propósito (incluye AbortError al desmontar).
+      });
+    return () => controller.abort();
+  }, []);
+
+  function irACombos(e: MouseEvent<HTMLAnchorElement>) {
+    const destino = document.getElementById(ID_SECCION_COMBOS);
+    if (!destino) return; // deja actuar al href="#combos" nativo
+    e.preventDefault();
+    const reducirMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    destino.scrollIntoView({ behavior: reducirMovimiento ? 'auto' : 'smooth', block: 'start' });
+  }
 
   function cargarServicios() {
     setServicios({ tipo: 'cargando' });
@@ -299,6 +331,13 @@ export function ReservaPage() {
               <img src="/logo_lg.png" alt="Camila González · Salón de belleza" />
               <h1>Reservá tu turno</h1>
               <p>Elegí un servicio, después con quién y a qué hora. Sin registrarte.</p>
+              {/* Sólo si hay ≥1 combo (§4.11, 2026-11-19). */}
+              {experiencias.length > 0 && (
+                <a className="hero-combos" href={`#${ID_SECCION_COMBOS}`} onClick={irACombos}>
+                  <IconoRegalo size={15} />
+                  Combos para vos o para regalar
+                </a>
+              )}
             </div>
             <Catalogo
               servicios={servicios}
@@ -310,6 +349,8 @@ export function ReservaPage() {
               onElegirProfesional={elegirProfesional}
               onReintentar={cargarServicios}
             />
+            {/* Debajo del catálogo, arriba del footer; sólo paso 1. */}
+            {experiencias.length > 0 && <Experiencias experiencias={experiencias} />}
           </>
         )}
 

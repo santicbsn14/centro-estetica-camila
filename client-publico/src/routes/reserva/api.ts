@@ -1,6 +1,12 @@
 import type { CrearTurnoInput } from '@shared/schemas/turno.schema';
 import { http } from '../../lib/http';
-import type { ServicioPublico, ProfesionalPublico, Slot, TurnoCreado } from './types';
+import type { ExperienciaPublica, ServicioPublico, ProfesionalPublico, Slot, TurnoCreado } from './types';
+
+// Combos y experiencias (§15.7.2). Independiente del catálogo de servicios:
+// quien lo llama traga el error (la sección simplemente no se muestra).
+export function listarExperiencias(signal?: AbortSignal): Promise<ExperienciaPublica[]> {
+  return http.get<ExperienciaPublica[]>('/api/experiencias', { signal });
+}
 
 // Wrapper delgado sobre lib/http — todos los reads son públicos, sin auth
 // (modelo-datos-turnos.md §15.1/15.2/15.3).

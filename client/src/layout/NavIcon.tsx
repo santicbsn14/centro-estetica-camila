@@ -1,6 +1,14 @@
 import type { ReactNode } from 'react';
 
-export type NavIconName = 'turnos' | 'agenda' | 'servicios' | 'profesionales' | 'configuracion' | 'excepciones' | 'mi';
+export type NavIconName =
+  | 'turnos'
+  | 'agenda'
+  | 'servicios'
+  | 'combos'
+  | 'profesionales'
+  | 'configuracion'
+  | 'excepciones'
+  | 'mi';
 
 // Paths clonados 1:1 de los <svg class="ic"> de client/mockups/*.html — un
 // ícono por item de NAV_ITEMS (layout/nav.ts). Puramente presentacional, sin
@@ -22,6 +30,13 @@ const PATHS: Record<NavIconName, ReactNode> = {
   ),
   servicios: (
     <path d="M20 7h-9M14 17H5M17 21a4 4 0 100-8 4 4 0 000 8zM7 11a4 4 0 100-8 4 4 0 000 8z" />
+  ),
+  // Sin mockup (combos, §4.5.1): regalo, mismo dibujo que el de la web pública.
+  combos: (
+    <>
+      <rect x="3" y="8" width="18" height="4" rx="1" />
+      <path d="M12 8v13M19 12v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7M7.5 8a2.5 2.5 0 010-5C9 3 12 8 12 8s3-5 4.5-5a2.5 2.5 0 010 5" />
+    </>
   ),
   profesionales: (
     <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13A4 4 0 0116 11" />

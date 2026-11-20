@@ -67,7 +67,7 @@ Aplican a todo el modelo, sin excepción.
 
 ## 4. Colecciones
 
-Ocho en total (nueve desde 2026-11-16: se suma `categorias`, ver abajo). El sub-esquema de horarios se comparte entre tres de ellas.
+Ocho en total (nueve desde 2026-11-16: se suma `categorias`; diez desde 2026-11-19: se suma `experiencias`, ver abajo). El sub-esquema de horarios se comparte entre tres de ellas.
 
 ### Sub-esquema de horarios
 
@@ -145,6 +145,30 @@ DECISIÓN 2026-11-16. Pedido de Camila: crear, renombrar y borrar categorías, y
 - **Sin `activo`.** Una categoría sin servicios activos no se muestra en la web; si sobra, se borra.
 - **`nombre` se guarda como lo escribe Camila.** El catálogo público lo muestra en mayúsculas con CSS (`text-transform: uppercase`), no con el string.
 - **Borrado FÍSICO — segunda excepción consciente a "borrado no existe" (§3).** Mismo argumento que excepciones (§15.10): ningún turno la referencia por snapshot. Con reglas (409 si tiene servicios activos; desasigna los inactivos antes de borrar) — detalle en §15.7.1.
+
+### experiencias
+
+DECISIÓN 2026-11-19 — Combos y experiencias. Pedido de Camila: combos de 2+ servicios para la propia clienta o para regalar. **NO se agendan desde la web**: el día y el pago se coordinan con Camila por WhatsApp.
+
+**Colección aparte, NO un servicio con flag.** `servicios` está atado a la agenda (duración, horarios, profesionales, disponibilidad; NuevoTurnoDrawer y la reserva pública consumen GET /api/servicios). Con un flag habría que filtrar en cada consumidor, y el que se olvide deja reservar un combo. Esta colección no toca servicios, disponibilidad ni turnos.
+
+```ts
+{
+  nombre: string,          // único case-insensitive, collation es strength 2
+  descripcion?: string,    // max 500
+  incluye: string[],       // 2..8 items, texto libre, cada uno trim 2..80
+  precio: number,          // centavos, entero. Lo fija Camila, NO es la suma
+  mostrarPrecio: boolean,
+  imagenUrl?: string,      // URL externa, mismo criterio que servicios §15.7
+  orden: number,
+  activo: boolean,         // sin borrado: activo:false
+  creadoEn, actualizadoEn
+}
+```
+
+- **`incluye` es texto libre a propósito:** el combo no se agenda, el sistema no necesita saber qué servicios son. NO referencia servicios.
+- **Sin DELETE:** borrado lógico como servicios (`PATCH activo`). Cumple §3 sin excepción.
+- Endpoints en §15.7.2.
 
 ### usuarios
 
@@ -529,6 +553,10 @@ alguna y hay que recrearla, cambia el HX → se edita el dato, no el código.
 
 // categorias (2026-11-16)
 { nombre: 1 } unique                             // collation { locale:'es', strength:2 }, igual que servicios
+
+// experiencias (2026-11-19)
+{ activo: 1, orden: 1 }                          // listado público
+{ nombre: 1 } unique                             // collation { locale:'es', strength:2 }
 
 // usuarios
 { email: 1 } unique
@@ -979,8 +1007,12 @@ typecheck limpio en el monorepo.**
   con 409 `CATEGORIA_CON_SERVICIOS` si hay activos; `servicios.categoriaId`;
   `categoria` embebida en GET /api/servicios público; script
   `backfill:categorias`. Detalle en §17.
+- **Combos y experiencias** (§4 `experiencias`, §15.7.2, 2026-11-19):
+  `POST/GET/GET:id/PATCH /api/admin/experiencias` sin DELETE (borrado
+  lógico), `GET /api/experiencias` público con allowlist y rate limit 60/min.
+  No toca servicios, disponibilidad ni turnos. Detalle en §17.
 
-**Conteo vigente (2026-11-16): 172 tests server + 10 shared verdes.**
+**Conteo vigente (2026-11-19): 188 tests server + 10 shared verdes.**
 
 ---
 
@@ -1613,6 +1645,50 @@ nueva no se ve en la web hasta que tenga un servicio activo.
 - GET /api/servicios público: categoría poblada, `null`, y huérfana ⇒ `null`.
 - PATCH servicio con `categoriaId: null` ⇒ queda `null`.
 - backfill: dry-run no escribe; `--apply` asigna; segunda corrida no cambia nada.
+
+
+### 15.7.2 Combos y experiencias — CRUD admin + GET público (DECISIÓN 2026-11-19)
+
+Colección `experiencias` (§4). NO toca servicios, disponibilidad ni turnos.
+Los combos no se agendan: el día y el pago se coordinan por WhatsApp.
+
+**@shared — `experiencia.schema.ts` nuevo** (exportado desde `index`):
+- `crearExperienciaSchema`: `nombre` min 2 max 80, `descripcion` max 500
+  opcional, `incluye` `z.array(z.string().trim().min(2).max(80)).min(2).max(8)`,
+  `precio` int ≥ 0, `mostrarPrecio` boolean, `imagenUrl` url opcional,
+  `orden` int. `activo` NO se acepta al crear (nace `true`).
+- `editarExperienciaSchema`: parcial, `.strict()`, incluye `activo`. Si
+  viene `incluye`, reemplaza el array entero.
+
+**Endpoints admin**, bajo `adminRouter` (`/api/admin`, `requireRol('admin')`):
+- `POST  /api/admin/experiencias`      ⇒ 201
+- `GET   /api/admin/experiencias`      ⇒ todas, incl. inactivas, por `orden` asc
+- `GET   /api/admin/experiencias/:id`
+- `PATCH /api/admin/experiencias/:id`
+- Sin DELETE (borrado lógico = `PATCH { activo: false }`).
+- `E11000` en nombre ⇒ `409 NOMBRE_DUPLICADO` (nunca el error crudo de
+  Mongo). `:id` malformado ⇒ 400, inexistente ⇒ 404.
+- `ExperienciaPanel` = todos los campos + `id`, mapper único.
+
+**Endpoint público: `GET /api/experiencias`**
+- `activo: true`, por `orden` asc.
+- Devuelve SÓLO: `_id`, `nombre`, `descripcion?`, `incluye`, `precio` (sólo
+  si `mostrarPrecio`), `imagenUrl?`. Nunca `orden`, `activo` ni timestamps.
+- Router factory con rate limit 60/min por IP, mismo patrón que
+  `servicios.routes.ts`. Montado en `app.ts`.
+
+**Fuera de alcance (fase 2):** cobro online, gift card con código, registro
+de vendidos o canjeados, tracking de clics.
+
+**Tests (mínimo):**
+- crear válido ⇒ 201; nombre duplicado con otra capitalización ⇒ 409.
+- `incluye` con 1 ítem ⇒ 400; con ítem vacío o de 1 carácter ⇒ 400; 9 ítems ⇒ 400.
+- PATCH parcial; PATCH con campo no declarado ⇒ 400; PATCH `activo:false`.
+- GET admin incluye inactivos; GET `:id` inexistente ⇒ 404; malformado ⇒ 400.
+- GET público: sólo activos, por orden, sin precio si `mostrarPrecio:false`,
+  sin `orden`/`activo`/timestamps (no-fuga).
+- GET público rate limit ⇒ 429 `DEMASIADAS_SOLICITUDES` (app aislada).
+- profesional sobre `/api/admin/experiencias` ⇒ 403.
 
 
 ### 15.8 CRUD administrativo — configuración (singleton)
@@ -3423,3 +3499,69 @@ explícitamente); validar existencia de `categoriaId` al asignar (§15.9).
 archivos) en una sola corrida, sin el flake de `auth.routes.test.ts` esta
 vez. El backfill NO se corrió contra ninguna base real (dev ni prod) — queda
 en el guión manual de frontend.md §5.
+
+### 2026-11-19 — Combos y experiencias (§4 `experiencias`, §15.7.2)
+
+Implementa la DECISIÓN 2026-11-19 (copiada a §4, §9 y §15.7.2 antes de
+codear). Prerrequisito verificado: categorías mergeado en `main` (`c674211`).
+Sin contradicciones con §1-16. **No se tocó** `servicios`, disponibilidad,
+turnos ni NuevoTurnoDrawer.
+
+**Qué se hizo (server + @shared):**
+- **`@shared/schemas/experiencia.schema.ts`** nuevo, exportado desde
+  `index.ts`. `crearExperienciaSchema` tal cual la decisión (`nombre` con
+  `.trim()` además del min 2/max 80, para que "  X  " no cuente espacios).
+  `editarExperienciaSchema` = `crear.extend({ activo }).partial().strict()`.
+- **Modelo** `experiencia.model.ts` (`Experiencia`, colección
+  `experiencias`): validador Mongoose de 2..8 ítems en `incluye` como
+  segunda capa; índices `{activo:1, orden:1}` y `{nombre:1}` unique con
+  collation `{locale:'es', strength:2}` (verificado con test sobre
+  `collection.indexes()`).
+- **`experiencias.service.ts`** + **`routes/admin/experiencias.routes.ts`**
+  (montado en `adminRouter.use('/experiencias', …)`): mapper único
+  `ExperienciaPanel` (todos los campos + `id`). `E11000` ⇒ 409
+  `NOMBRE_DUPLICADO` reusando `esNombreDuplicado` de `servicios.service.ts`.
+  `:id` malformado ⇒ 400 `ID_INVALIDO`; inexistente ⇒ 404
+  `EXPERIENCIA_NO_ENCONTRADA`. PATCH con `$set` del input ⇒ `incluye`
+  reemplaza el array entero.
+- **`routes/experiencias.routes.ts`**: factory `crearExperienciasRouter()`
+  con rate limit propio 60/min (mismo handler `DEMASIADAS_SOLICITUDES` que
+  servicios), montado en `app.ts` como `/api/experiencias`. `.select()` +
+  `.map()` con allowlist: `_id, nombre, descripcion?, incluye, precio? (si
+  mostrarPrecio), imagenUrl?`. `descripcion` vacía no viaja.
+
+**Panel + client-publico:** ver frontend.md §5, misma fecha.
+
+**Tests:** 16 nuevos (172 → 188 server; shared sigue 10).
+- `routes/admin/experiencias.routes.test.ts` (13): índices con collation;
+  crear 201 + shape exacto; `activo:false` al crear se ignora (nace true);
+  duplicado con otra capitalización ⇒ 409 sin `E11000`; `incluye` con 1
+  ítem / `''` / `'   '` / 1 carácter / 9 ítems ⇒ 400 sin escribir nada;
+  8 ítems ok + trim; PATCH parcial (precio) + `incluye` reemplaza; PATCH
+  con campo no declarado ⇒ 400 `BODY_INVALIDO`; `activo:false` saca del
+  público y sigue en la base, `activo:true` reactiva; renombre duplicado ⇒
+  409, `:id` malformado 400, inexistente 404; GET admin con inactivos por
+  orden; GET `:id` 200/404/400; profesional ⇒ 403 en las 4 rutas.
+- `routes/experiencias.routes.test.ts` (3): sólo activas por orden, sin
+  `precio` si `!mostrarPrecio`, keys exactas (sin `orden`/`activo`/
+  `mostrarPrecio`/timestamps/`__v`); vacío ⇒ `[]`; rate limit ⇒ 429
+  `DEMASIADAS_SOLICITUDES` con app aislada.
+
+**Problema encontrado:** en la primera corrida completa fallaron 2 tests de
+`auth.routes.test.ts` por timeout de 5 s — el flake de contención de CPU ya
+documentado (2026-09-04). Ese archivo solo: 14/14; segunda corrida completa:
+188/188. No relacionado con este cambio.
+
+**Descartado:** DELETE (la decisión lo excluye); referenciar servicios desde
+`incluye` (texto libre a propósito); soporte de vaciar `imagenUrl` con `''`
+(mismo límite que servicios §15.7); cobro online, gift card, registro de
+vendidos/canjeados y tracking de clics (fase 2).
+
+**Deploy:** sin orden obligatorio fuerte. Si client-publico sale antes que
+el server, `GET /api/experiencias` da 404 y la sección simplemente no se
+muestra (diseñado así). El panel nuevo contra un server viejo muestra error
+sólo en `/combos`.
+
+**Verificación:** `npm run typecheck` limpio en los 4 workspaces;
+`npm run build` de `client` (warning preexistente de chunk >500 kB) y
+`client-publico` OK. `shared` 10/10, `server` 188/188 (22 archivos).

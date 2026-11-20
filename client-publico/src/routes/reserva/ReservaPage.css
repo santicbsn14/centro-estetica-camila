@@ -1048,6 +1048,161 @@ input[aria-invalid='true'] {
   text-underline-offset: 2px;
 }
 
+/* Combos y experiencias (frontend.md §4.11, DECISIÓN 2026-11-19). Sólo
+   tokens existentes: texto claro sobre --color-tinta con --color-papel /
+   --color-linea-fuerte; nada nuevo en tokens.css. */
+.hero-combos {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-tinta);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.combos {
+  margin-top: 28px;
+  background: var(--color-tinta);
+  color: var(--color-papel);
+  border-radius: 22px;
+  padding: 26px 16px 18px;
+  scroll-margin-top: 72px; /* que el header sticky no tape el eyebrow */
+}
+.combos-eyebrow {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-linea-fuerte);
+  text-align: center;
+}
+.combos-titulo {
+  margin: 0 0 6px;
+  font-family: var(--fuente-display);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-papel);
+  text-align: center;
+}
+.combos-sub {
+  margin: 0 auto 20px;
+  max-width: 280px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-linea-fuerte);
+  text-align: center;
+}
+.combos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.combo {
+  background: var(--color-papel);
+  color: var(--color-tinta);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.combo-img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--color-linea);
+}
+.combo-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.combo-body {
+  padding: 16px 16px 16px;
+}
+.combo-nombre {
+  margin: 0 0 4px;
+  font-family: var(--fuente-display);
+  font-size: 19px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.combo-desc {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-tinta-72);
+  overflow-wrap: anywhere;
+}
+.combo-eyebrow {
+  margin: 12px 0 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-tinta-72);
+}
+.combo-incluye {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.combo-incluye li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+.combo-check {
+  flex: none;
+  margin-top: 1px;
+  color: var(--color-estado-confirmado-texto);
+}
+.combo-precio {
+  margin: 14px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+.combo-acciones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+.combo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 10px 8px;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  line-height: 1.2;
+}
+.combo-btn--solido {
+  background: var(--color-tinta);
+  color: var(--color-papel);
+  border: 1px solid var(--color-tinta);
+}
+.combo-btn--outline {
+  background: transparent;
+  color: var(--color-tinta);
+  border: 1px solid var(--color-tinta);
+}
+.combo-btn svg {
+  flex: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;

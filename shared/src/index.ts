@@ -6,4 +6,5 @@ export * from './schemas/configuracion.schema';
 export * from './schemas/usuario.schema';
 export * from './schemas/excepcion.schema';
 export * from './schemas/categoria.schema';
+export * from './schemas/experiencia.schema';
 export * from './utils/intervalos';

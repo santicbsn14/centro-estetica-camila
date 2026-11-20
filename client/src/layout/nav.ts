@@ -12,11 +12,12 @@ export interface NavItem {
 
 // Un solo lugar para la forma del nav — el guard de rol (RequireRol) protege
 // las rutas; esto sólo decide qué se muestra. Mantenerlos en sync a mano por
-// ahora (son 7 items).
+// ahora (son 8 items).
 export const NAV_ITEMS: NavItem[] = [
   { to: '/turnos', label: 'Turnos', icon: 'turnos' },
   { to: '/agenda', label: 'Agenda', icon: 'agenda' }, // ambos roles (frontend.md §4.14)
   { to: '/servicios', label: 'Servicios', icon: 'servicios', rolesPermitidos: ['admin'] },
+  { to: '/combos', label: 'Combos', icon: 'combos', rolesPermitidos: ['admin'] }, // §4.5.1
   { to: '/profesionales', label: 'Profesionales', icon: 'profesionales', rolesPermitidos: ['admin'] },
   { to: '/configuracion', label: 'Configuración', icon: 'configuracion', rolesPermitidos: ['admin'] },
   { to: '/excepciones', label: 'Excepciones', icon: 'excepciones', rolesPermitidos: ['admin'] },
